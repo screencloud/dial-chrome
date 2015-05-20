@@ -7,8 +7,8 @@ module.exports = (function(){
   var webServerPort = 1999;
   var WebServerChrome = require('web-server-chrome');
   var WebApplication = WebServerChrome.Server; 
-  var deviceUUID = "2fac1234-31f8-3344-2222-08002b34c003";
-  var friendlyName = "ChromeApp Player";
+  var deviceUUID = "2fac1234-31f8-1122-2222-08002b34c003";
+  var friendlyName = "ChromeApp Player A";
   var appWindow = undefined;
 
   function DialService() {
@@ -55,7 +55,7 @@ module.exports = (function(){
        },
        function(appWin) {
         console.log('update command url');
-
+        // appWin.window.fullscreen();
          appWin.contentWindow.addEventListener('DOMContentLoaded',
            function(e) {
              // when window is loaded, set webview source
@@ -65,9 +65,6 @@ module.exports = (function(){
              console.log('open targetURL', targetURL );
              // now we can show it:
              appWin.show();
-
-            
-
            }
          );
 
@@ -82,17 +79,8 @@ module.exports = (function(){
         }
 
        });
-
-    // }else{
-    //   var appWindows = chrome.app.window.getAll();
-    //   for (var i = 0; i < appWindows.length; i++) {
-    //     var appWindow = appWindows[i];
-    //     appWindow.close();
-    //   };
-
-    //   openAppWindow( command );
-    // }
   }
+
   function _validateIPaddress(ipaddress)   
   {  
    if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))  
