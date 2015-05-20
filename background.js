@@ -314,53 +314,12 @@ function reload() { chrome.runtime.reload() }
 chrome.app.runtime.onLaunched.addListener(function(o) {
 
 //   // Center window on screen.
-	chrome.app.window.create(
-       'window.html',
-       {
-        id:"ScreenCloudPlayer",
-        outerBounds: {
-          width: width,
-          height: height,
-          left: Math.round((screenWidth-width)/2),
-          top: Math.round((screenHeight-height)/2)
-        },
-        hidden: true  // only show window when webview is configured
-       },
-       function(appWin) {
-        console.log('update command url');
-
-         appWin.contentWindow.addEventListener('DOMContentLoaded',
-           function(e) {
-             // when window is loaded, set webview source
-             var webview = appWin.contentWindow.
-                  document.querySelector('webview');
-             webview.src = targetURL;
-             console.log('open targetURL', targetURL );
-             // now we can show it:
-             appWin.show();
-
-            
-
-           }
-         );
-
-
-        var webview = appWin.contentWindow.
-                  document.querySelector('webview');
-        if(webview){
-          webview.src = targetURL;
-          console.log('open targetURL', targetURL );
-          // now we can show it:
-          appWin.show();
-        }
-
-    });
-
-  dialService.start();
-  console.log('dialService', dialService);
+  console.log('onLaunched');
 
 });
 
+dialService.start();
+console.log('dialService', dialService);
 
 },{"./dialService.js":1}],3:[function(require,module,exports){
 // module interface for chrome os

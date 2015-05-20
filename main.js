@@ -16,8 +16,7 @@ chrome.app.runtime.onLaunched.addListener(function(o) {
 //   // Center window on screen.
   console.log('onLaunched');
 
-  dialService.start();
-  console.log('dialService', dialService);
-
 });
 
+dialService.start();
+console.log('dialService', dialService);
