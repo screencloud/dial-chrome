@@ -1,7 +1,7 @@
 
 module.exports = (function(){
 
-  var ssdp = require('./ssdp/chrome.js');
+  var ssdp = require('ssdp/chrome.js');
   var deviceIpAddress = "0.0.0.0";
   var webServerPort = 1999;
   var WebServerChrome = require('web-server-chrome');

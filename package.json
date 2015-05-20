@@ -1,0 +1,25 @@
+{
+  "name": "dial-chrome",
+  "version": "1.0.0",
+  "description": "dial server lib google chrome app",
+  "main": "index.js",
+  "dependencies": {
+    "ssdp": "git://github.com/BYossarian/ssdp",
+    "web-server-chrome": "git://github.com/screencloud/web-server-chrome"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/screencloud/dial-chrome.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/screencloud/dial-chrome/issues"
+  },
+  "homepage": "https://github.com/screencloud/dial-chrome"
+}

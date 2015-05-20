@@ -21,7 +21,7 @@
     ],
   "app": {
     "background": {
-      "scripts": ["screenCloudPlayer.js"]
+      "scripts": ["background.js"]
     }
   },
   "icons": { "16": "screenCloudPlayer-16.png", "128": "screenCloudPlayer-128.png" },
