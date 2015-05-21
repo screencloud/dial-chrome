@@ -41,6 +41,18 @@ module.exports = (function(){
     var defaultPlayerUrl = "";
     var urlMapping;
     
+    var availableApps = []; // array of registered apps / running apps
+
+    var appConfig = {
+        appId : "ScreenCloud",
+        deviceUUID : "2fac1234-31f8-1122-2222-08002b34c003",
+        friendlyName : "ChromeApp Player",
+        manufacturer : "ScreenCloud Player",
+        modelName : "Chrome App",
+        allowStoppable : "true",  // string only "true" or "false"
+        defaultPlayerUrl : "",
+        urlMapping
+    };//
 
     function DialService() {
         // this.exampleProp = undefined;
