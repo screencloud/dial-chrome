@@ -10,6 +10,7 @@
 var DialService = require('./dialService.js');
 var dialService = new DialService();
 var config = require('./config.js');
+var windowManager = require('./windowManager');
 var defaultPlayerUrl = "";
 var savedConfig;
 
@@ -24,64 +25,64 @@ function saveConfig(key, value) {
 	chrome.storage.local.set({key:value}); // save
 }
 
-var windowManager = {
-    openAppWindow: function( command ){
-        console.log('windowManager: openAppWindow', command);
-        console.log('total app windows = ', chrome.app.window.getAll().length );
-        
-        var targetURL = defaultPlayerUrl;
-        var screenWidth = Math.round(window.screen.availWidth*1.0);
-        var screenHeight = Math.round(window.screen.availHeight*1.0);
-        var width = Math.round(screenWidth*0.5);
-        var height = Math.round(screenHeight*0.5);
+// var windowManager = {
+//     openAppWindow: function( command ){
+//         console.log('windowManager: openAppWindow', command);
+//         console.log('total app windows = ', chrome.app.window.getAll().length );
 
-        console.log("screen size = ", width);
+//         var targetURL = defaultPlayerUrl;
+//         var screenWidth = Math.round(window.screen.availWidth*1.0);
+//         var screenHeight = Math.round(window.screen.availHeight*1.0);
+//         var width = Math.round(screenWidth*0.5);
+//         var height = Math.round(screenHeight*0.5);
 
-        if( command ){
-            targetURL = command;
-        }
+//         console.log("screen size = ", width);
 
-        chrome.app.window.create(
-            'window.html',
-            {
-                id:"ScreenCloudPlayer",
-                outerBounds: {
-                    width: width,
-                    height: height,
-                    left: Math.round((screenWidth-width)/2),
-                    top: Math.round((screenHeight-height)/2)
-                },
-                hidden: true  // only show window when webview is configured
-            },
-            function(appWin) {
-                console.log('update command url');
+//         if( command ){
+//             targetURL = command;
+//         }
 
-                var updateWebviewURL = function(targetURL){
-                    var webview = appWin.contentWindow.document.querySelector('webview');
-                    if(webview){
-                        webview.src = targetURL;
-                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
-                        var dataObject = {};
-                        dataObject[config.k_LATEST_URL] = targetURL;
-                        config.saveConfig( dataObject );
-                        console.log('open targetURL = ' + targetURL );
-                        appWin.show();
-                    }
-                }
+//         chrome.app.window.create(
+//             'window.html',
+//             {
+//                 id:"ScreenCloudPlayer",
+//                 outerBounds: {
+//                     width: width,
+//                     height: height,
+//                     left: Math.round((screenWidth-width)/2),
+//                     top: Math.round((screenHeight-height)/2)
+//                 },
+//                 hidden: true  // only show window when webview is configured
+//             },
+//             function(appWin) {
+//                 console.log('update command url');
 
-                appWin.contentWindow.addEventListener('DOMContentLoaded',
-                    function(e) {
-                        // when window is loaded, set webview source
-                        updateWebviewURL(targetURL);
-                    }
-                );
-                // this for execute later when get called to change content url
-                updateWebviewURL( targetURL );
+//                 var updateWebviewURL = function(targetURL){
+//                     var webview = appWin.contentWindow.document.querySelector('webview');
+//                     if(webview){
+//                         webview.src = targetURL;
+//                         console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+//                         var dataObject = {};
+//                         dataObject[config.k_LATEST_URL] = targetURL;
+//                         config.saveConfig( dataObject );
+//                         console.log('open targetURL = ' + targetURL );
+//                         appWin.show();
+//                     }
+//                 }
 
-            }.bind(this)
-        );
-    }
-}
+//                 appWin.contentWindow.addEventListener('DOMContentLoaded',
+//                     function(e) {
+//                         // when window is loaded, set webview source
+//                         updateWebviewURL(targetURL);
+//                     }
+//                 );
+//                 // this for execute later when get called to change content url
+//                 updateWebviewURL( targetURL );
+
+//             }.bind(this)
+//         );
+//     }
+// }
 
 // get config
 chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL, config.k_LATEST_URL], function(result){
@@ -112,6 +113,7 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
                             }
     dialService.registerApp(screenCloudPlayer);
 
+    
 
     // start dial service
     // uuid, devicename, playerUrl, mfacturer, mName) {

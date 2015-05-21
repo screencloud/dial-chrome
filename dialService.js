@@ -120,6 +120,7 @@ module.exports = (function(){
             }
             appConfig.defaultPlayerUrl = appConfig.defaultPlayerUrl;
             appConfig.urlMapping = appConfig.urlMapping;
+
             if( appConfig.state ){
                 appConfig.state = appConfig.state;
             }else{
@@ -197,7 +198,7 @@ module.exports = (function(){
 
             }.bind(this) );
             
-            windowManager.openAppWindow();
+            windowManager.openAppWindow( defaultPlayerUrl );
         },
 
 

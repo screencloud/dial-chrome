@@ -138,6 +138,7 @@ module.exports = (function(){
             }
             appConfig.defaultPlayerUrl = appConfig.defaultPlayerUrl;
             appConfig.urlMapping = appConfig.urlMapping;
+
             if( appConfig.state ){
                 appConfig.state = appConfig.state;
             }else{
@@ -215,7 +216,7 @@ module.exports = (function(){
 
             }.bind(this) );
             
-            windowManager.openAppWindow();
+            windowManager.openAppWindow( defaultPlayerUrl );
         },
 
 
@@ -346,22 +347,10 @@ module.exports = (function(){
 
                 post: function() {
                     // handle get request
-                    // this.write('POST OK!, ' + this.request.uri)
                     console.log('request.path', this.request.path);
                     console.log('POST OK!, ' + this.request.uri );
                     console.log('POST Body, ' + this.request.getBodyAsString() );
 
-                    // console.log(
-                    //   this.request.data,
-                    //   this.request.getBodyAsString(),
-                    //   this.request.getBodyAsJSON())
-
-                    // console.log(this.request.getBodyAsJSON() );
-                    // var command = this.request.getBodyAsJSON();
-
-                    // if( command.app_id == "ScreenCloud" ){
-                    //     openAppWindow( command );
-                    // }
                     var appId = this.request.path.split('/apps/')[1].split('/')[0]
                     console.log('appId = ' + appId);
 
@@ -371,7 +360,6 @@ module.exports = (function(){
                     windowManager.openAppWindow( url );
 
                     appConfig.state = 'running';
-
                     this.setHeader("Location", "http://"+deviceIpAddress+":"+webServerPort+"/apps/"+appId+"/web-1");
                     this.write(" ", 201);
 
@@ -418,6 +406,7 @@ module.exports = (function(){
 var DialService = require('./dialService.js');
 var dialService = new DialService();
 var config = require('./config.js');
+var windowManager = require('./windowManager');
 var defaultPlayerUrl = "";
 var savedConfig;
 
@@ -432,66 +421,64 @@ function saveConfig(key, value) {
 	chrome.storage.local.set({key:value}); // save
 }
 
-var windowManager = {
-    openAppWindow: function( command ){
-        console.log('windowManager: openAppWindow', command);
-        console.log('total app windows = ', chrome.app.window.getAll().length );
+// var windowManager = {
+//     openAppWindow: function( command ){
+//         console.log('windowManager: openAppWindow', command);
+//         console.log('total app windows = ', chrome.app.window.getAll().length );
 
-        // if( chrome.app.window.getAll().length == 0 ){
+//         var targetURL = defaultPlayerUrl;
+//         var screenWidth = Math.round(window.screen.availWidth*1.0);
+//         var screenHeight = Math.round(window.screen.availHeight*1.0);
+//         var width = Math.round(screenWidth*0.5);
+//         var height = Math.round(screenHeight*0.5);
 
-        var targetURL = defaultPlayerUrl;
-        var screenWidth = Math.round(window.screen.availWidth*1.0);
-        var screenHeight = Math.round(window.screen.availHeight*1.0);
-        var width = Math.round(screenWidth*0.5);
-        var height = Math.round(screenHeight*0.5);
+//         console.log("screen size = ", width);
 
-        console.log("screen size = ", width);
+//         if( command ){
+//             targetURL = command;
+//         }
 
-        if( command ){
-            targetURL = command;
-        }
+//         chrome.app.window.create(
+//             'window.html',
+//             {
+//                 id:"ScreenCloudPlayer",
+//                 outerBounds: {
+//                     width: width,
+//                     height: height,
+//                     left: Math.round((screenWidth-width)/2),
+//                     top: Math.round((screenHeight-height)/2)
+//                 },
+//                 hidden: true  // only show window when webview is configured
+//             },
+//             function(appWin) {
+//                 console.log('update command url');
 
-        chrome.app.window.create(
-            'window.html',
-            {
-                id:"ScreenCloudPlayer",
-                outerBounds: {
-                    width: width,
-                    height: height,
-                    left: Math.round((screenWidth-width)/2),
-                    top: Math.round((screenHeight-height)/2)
-                },
-                hidden: true  // only show window when webview is configured
-            },
-            function(appWin) {
-                console.log('update command url');
+//                 var updateWebviewURL = function(targetURL){
+//                     var webview = appWin.contentWindow.document.querySelector('webview');
+//                     if(webview){
+//                         webview.src = targetURL;
+//                         console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+//                         var dataObject = {};
+//                         dataObject[config.k_LATEST_URL] = targetURL;
+//                         config.saveConfig( dataObject );
+//                         console.log('open targetURL = ' + targetURL );
+//                         appWin.show();
+//                     }
+//                 }
 
-                var updateWebviewURL = function(targetURL){
-                    var webview = appWin.contentWindow.document.querySelector('webview');
-                    if(webview){
-                        webview.src = targetURL;
-                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
-                        var dataObject = {};
-                        dataObject[config.k_LATEST_URL] = targetURL;
-                        config.saveConfig( dataObject );
-                        console.log('open targetURL = ' + targetURL );
-                        appWin.show();
-                    }
-                }
+//                 appWin.contentWindow.addEventListener('DOMContentLoaded',
+//                     function(e) {
+//                         // when window is loaded, set webview source
+//                         updateWebviewURL(targetURL);
+//                     }
+//                 );
+//                 // this for execute later when get called to change content url
+//                 updateWebviewURL( targetURL );
 
-                appWin.contentWindow.addEventListener('DOMContentLoaded',
-                    function(e) {
-                        // when window is loaded, set webview source
-                        updateWebviewURL(targetURL);
-                    }
-                );
-                // this for execute later when get called to change content url
-                updateWebviewURL( targetURL );
-
-            }.bind(this)
-        );
-    }
-}
+//             }.bind(this)
+//         );
+//     }
+// }
 
 // get config
 chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL, config.k_LATEST_URL], function(result){
@@ -538,7 +525,7 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
 });
 
-},{"./config.js":1,"./dialService.js":2}],4:[function(require,module,exports){
+},{"./config.js":1,"./dialService.js":2,"./windowManager":29}],4:[function(require,module,exports){
 // module interface for chrome os
 
 var udp = require('./lib/udp/udp-chrome.js');
@@ -649,7 +636,7 @@ module.exports = function(udp) {
 
 };
 
-},{"./httpu.js":7,"./ssdp-constants.js":10,"events":33}],6:[function(require,module,exports){
+},{"./httpu.js":7,"./ssdp-constants.js":10,"events":34}],6:[function(require,module,exports){
 
 var os = require('os');
 
@@ -892,7 +879,7 @@ module.exports = function(udp) {
 
 };
 
-},{"../package.json":12,"./httpu.js":7,"./ssdp-constants.js":10,"os":40}],7:[function(require,module,exports){
+},{"../package.json":12,"./httpu.js":7,"./ssdp-constants.js":10,"os":41}],7:[function(require,module,exports){
 
 var httpParser = require('./modules/http-parser.js');
 
@@ -1148,7 +1135,7 @@ module.exports = {
     stringify: stringify
 };
 
-},{"http":34}],9:[function(require,module,exports){
+},{"http":35}],9:[function(require,module,exports){
 
 function stringToBuffer(string) {
     // NB: uses UTF-8
@@ -10459,6 +10446,67 @@ module.exports = (function(){
 })();
 
 },{}],29:[function(require,module,exports){
+var config = require('./config.js');
+
+module.exports = {
+    openAppWindow: function( command ){
+        console.log('windowManager: openAppWindow', command);
+        console.log('total app windows = ', chrome.app.window.getAll().length );
+        
+        var targetURL = "";
+        var screenWidth = Math.round(window.screen.availWidth*1.0);
+        var screenHeight = Math.round(window.screen.availHeight*1.0);
+        var width = Math.round(screenWidth*0.5);
+        var height = Math.round(screenHeight*0.5);
+
+        console.log("screen size = ", width);
+
+        if( command ){
+            targetURL = command;
+        }
+
+        chrome.app.window.create(
+            'window.html',
+            {
+                id:"ScreenCloudPlayer",
+                outerBounds: {
+                    width: width,
+                    height: height,
+                    left: Math.round((screenWidth-width)/2),
+                    top: Math.round((screenHeight-height)/2)
+                },
+                hidden: true  // only show window when webview is configured
+            },
+            function(appWin) {
+                console.log('update command url');
+
+                var updateWebviewURL = function(targetURL){
+                    var webview = appWin.contentWindow.document.querySelector('webview');
+                    if(webview){
+                        webview.src = targetURL;
+                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+                        var dataObject = {};
+                        dataObject[config.k_LATEST_URL] = targetURL;
+                        config.saveConfig( dataObject );
+                        console.log('open targetURL = ' + targetURL );
+                        appWin.show();
+                    }
+                }
+
+                appWin.contentWindow.addEventListener('DOMContentLoaded',
+                    function(e) {
+                        // when window is loaded, set webview source
+                        updateWebviewURL(targetURL);
+                    }
+                );
+                // this for execute later when get called to change content url
+                updateWebviewURL( targetURL );
+
+            }.bind(this)
+        );
+    }
+};
+},{"./config.js":1}],30:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -11511,7 +11559,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":30,"ieee754":31,"is-array":32}],30:[function(require,module,exports){
+},{"base64-js":31,"ieee754":32,"is-array":33}],31:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -11633,7 +11681,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -11719,7 +11767,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 
 /**
  * isArray
@@ -11754,7 +11802,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -12057,7 +12105,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 var http = module.exports;
 var EventEmitter = require('events').EventEmitter;
 var Request = require('./lib/request');
@@ -12203,7 +12251,7 @@ http.STATUS_CODES = {
     510 : 'Not Extended',               // RFC 2774
     511 : 'Network Authentication Required' // RFC 6585
 };
-},{"./lib/request":35,"events":33,"url":59}],35:[function(require,module,exports){
+},{"./lib/request":36,"events":34,"url":60}],36:[function(require,module,exports){
 var Stream = require('stream');
 var Response = require('./response');
 var Base64 = require('Base64');
@@ -12414,7 +12462,7 @@ var isXHR2Compatible = function (obj) {
     if (typeof FormData !== 'undefined' && obj instanceof FormData) return true;
 };
 
-},{"./response":36,"Base64":37,"inherits":38,"stream":57}],36:[function(require,module,exports){
+},{"./response":37,"Base64":38,"inherits":39,"stream":58}],37:[function(require,module,exports){
 var Stream = require('stream');
 var util = require('util');
 
@@ -12536,7 +12584,7 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":57,"util":61}],37:[function(require,module,exports){
+},{"stream":58,"util":62}],38:[function(require,module,exports){
 ;(function () {
 
   var object = typeof exports != 'undefined' ? exports : this; // #8: web workers
@@ -12598,7 +12646,7 @@ var isArray = Array.isArray || function (xs) {
 
 }());
 
-},{}],38:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -12623,12 +12671,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -12675,7 +12723,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -12763,7 +12811,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/punycode v1.2.4 by @mathias */
 ;(function(root) {
@@ -13274,7 +13322,7 @@ process.chdir = function (dir) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13360,7 +13408,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13447,16 +13495,16 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":43,"./encode":44}],46:[function(require,module,exports){
+},{"./decode":44,"./encode":45}],47:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":47}],47:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":48}],48:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -13549,7 +13597,7 @@ function forEach (xs, f) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_readable":49,"./_stream_writable":51,"_process":41,"core-util-is":52,"inherits":38}],48:[function(require,module,exports){
+},{"./_stream_readable":50,"./_stream_writable":52,"_process":42,"core-util-is":53,"inherits":39}],49:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13597,7 +13645,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":50,"core-util-is":52,"inherits":38}],49:[function(require,module,exports){
+},{"./_stream_transform":51,"core-util-is":53,"inherits":39}],50:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -14583,7 +14631,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"_process":41,"buffer":29,"core-util-is":52,"events":33,"inherits":38,"isarray":39,"stream":57,"string_decoder/":58}],50:[function(require,module,exports){
+},{"_process":42,"buffer":30,"core-util-is":53,"events":34,"inherits":39,"isarray":40,"stream":58,"string_decoder/":59}],51:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -14795,7 +14843,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":47,"core-util-is":52,"inherits":38}],51:[function(require,module,exports){
+},{"./_stream_duplex":48,"core-util-is":53,"inherits":39}],52:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15185,7 +15233,7 @@ function endWritable(stream, state, cb) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":47,"_process":41,"buffer":29,"core-util-is":52,"inherits":38,"stream":57}],52:[function(require,module,exports){
+},{"./_stream_duplex":48,"_process":42,"buffer":30,"core-util-is":53,"inherits":39,"stream":58}],53:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15295,10 +15343,10 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":29}],53:[function(require,module,exports){
+},{"buffer":30}],54:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":48}],54:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":49}],55:[function(require,module,exports){
 var Stream = require('stream'); // hack to fix a circular dependency issue when used with browserify
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = Stream;
@@ -15308,13 +15356,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":47,"./lib/_stream_passthrough.js":48,"./lib/_stream_readable.js":49,"./lib/_stream_transform.js":50,"./lib/_stream_writable.js":51,"stream":57}],55:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":48,"./lib/_stream_passthrough.js":49,"./lib/_stream_readable.js":50,"./lib/_stream_transform.js":51,"./lib/_stream_writable.js":52,"stream":58}],56:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":50}],56:[function(require,module,exports){
+},{"./lib/_stream_transform.js":51}],57:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":51}],57:[function(require,module,exports){
+},{"./lib/_stream_writable.js":52}],58:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15443,7 +15491,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":33,"inherits":38,"readable-stream/duplex.js":46,"readable-stream/passthrough.js":53,"readable-stream/readable.js":54,"readable-stream/transform.js":55,"readable-stream/writable.js":56}],58:[function(require,module,exports){
+},{"events":34,"inherits":39,"readable-stream/duplex.js":47,"readable-stream/passthrough.js":54,"readable-stream/readable.js":55,"readable-stream/transform.js":56,"readable-stream/writable.js":57}],59:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15666,7 +15714,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":29}],59:[function(require,module,exports){
+},{"buffer":30}],60:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16375,14 +16423,14 @@ function isNullOrUndefined(arg) {
   return  arg == null;
 }
 
-},{"punycode":42,"querystring":45}],60:[function(require,module,exports){
+},{"punycode":43,"querystring":46}],61:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],61:[function(require,module,exports){
+},{}],62:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -16972,4 +17020,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":60,"_process":41,"inherits":38}]},{},[3]);
+},{"./support/isBuffer":61,"_process":42,"inherits":39}]},{},[3]);
