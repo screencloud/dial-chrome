@@ -4,16 +4,16 @@
   	<meta charset="utf-8">
     <title>ScreenCloud</title>
     <link href="styles/main.css" rel="stylesheet">
-    <script src="dialog.js"></script>
   </head>
   <body>
     <webview style="position:relative;z-index:-1;" id="webviewPlayer" autosize="true" src="http://screenbox.io"></webview>
     <dialog id="dialogSetting" style="width:300px">
 		<h1>ScreenCloud Settings</h1>
+		<input style="width:100%" type="text" id="tbUUID" readonly value="" />
 		<div>
-			<p><input type="checkbox" id="cbKeepAlwayOn" value="1" /> <label for='cbKeepAlwayOn'>Keep screen always on</label></p>
-			<p><input type="checkbox" id="cdStartAtBoot" value="1" /> <label for='cdStartAtBoot'>Start at boot (Foreground)</label></p>
-			<p><input type="checkbox" id="cbVisible" value="1" /> <label for='cbVisible'>Visible via local network</label></p>
+			<!--<p><input type="checkbox" id="cbKeepAlwayOn" value="1" /> <label for='cbKeepAlwayOn'>Keep screen always on</label></p>-->
+			<!--<p><input type="checkbox" id="cdStartAtBoot" value="1" /> <label for='cdStartAtBoot'>Start at boot (Foreground)</label></p>-->
+			<!--<p><input type="checkbox" id="cbVisible" value="1" /> <label for='cbVisible'>Visible via local network</label></p>-->
 			<p>Default url <br/><input style="width:100%" type="text" id="tbDefaultUrl" value="http://player.screencloud.io/index.html" /></p>
 			<p>Friendly device name <br/><input style="width:100%" type="text" id="tbFriendlyName" value="" /></p>
 
@@ -21,5 +21,6 @@
 			<button id="close">Close</button>
 		</div>
 	</dialog>
+	<script src="setting_dialog.js"></script>
   </body>
 </html>
