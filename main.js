@@ -41,7 +41,30 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
     console.log('defaultPlayerUrl--->'+defaultPlayerUrl);
 
+    
+    
+    var screenCloudPlayer = {
+                                appId : "ScreenCloud",
+                                defaultPlayerUrl : defaultPlayerUrl,
+                                urlMapping : function(arg){
+                                    return JSON.parse(arg).url;
+                                },
+                                allowStoppable : "true"
+                            }
+    dialService.registerApp(screenCloudPlayer);
+
+    var youtubePlayer = {
+                                appId : "YouTube",
+                                defaultPlayerUrl : defaultPlayerUrl,
+                                urlMapping : function(arg){
+                                    return "https://www.youtube.com/tv?" + arg;
+                                },
+                                allowStoppable : "false"
+                            }
+    dialService.registerApp(youtubePlayer);
+
     // start dial service
-    dialService.start(uuid, deviceName, defaultPlayerUrl);
+    // uuid, devicename, playerUrl, mfacturer, mName) {
+    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model');
 
 });

@@ -33,26 +33,28 @@ module.exports = (function(){
 
     // Dial device details
     var appId = "ScreenCloud";
+    // overall config for Dial service
     var deviceUUID = "2fac1234-31f8-1122-2222-08002b34c003";
     var friendlyName = "ChromeApp Player";
     var manufacturer = "ScreenCloud Player";
     var modelName = "Chrome App";
-    var allowStoppable = "true";  // string only "true" or "false"
+    
+
+    // base on each app config
     var defaultPlayerUrl = "";
     var urlMapping;
-    
-    var availableApps = []; // array of registered apps / running apps
+    var allowStoppable = "true";  // string only "true" or "false"
 
-    var appConfig = {
-        appId : "ScreenCloud",
-        deviceUUID : "2fac1234-31f8-1122-2222-08002b34c003",
-        friendlyName : "ChromeApp Player",
-        manufacturer : "ScreenCloud Player",
-        modelName : "Chrome App",
-        allowStoppable : "true",  // string only "true" or "false"
-        defaultPlayerUrl : "",
-        urlMapping
-    };//
+
+    var availableApps = []; // array of registered apps / running apps
+    var getApp = function(id) {
+            for (var i = 0; i < availableApps.length; i++) {
+                var existingApp = availableApps[i];
+                if( existingApp.appId == id ){
+                    return existingApp;
+                }
+            }
+        }
 
     function DialService() {
         // this.exampleProp = undefined;
@@ -72,8 +74,8 @@ module.exports = (function(){
 
         console.log("screen size = ", width);
 
-        if( command && command.url ){
-            targetURL = command.url;
+        if( command ){
+            targetURL = command;
         }
 
         chrome.app.window.create(
@@ -118,31 +120,69 @@ module.exports = (function(){
 
     DialService.prototype = {
 
-        registerApp: function(_appId, _stoppable, _urlMapping){
+        registerApp: function(appConfig){
             // initialize configurations
 
-            appId = _appId;
-            if(_stoppable || _stoppable == "true" || _stoppable == 1){
-                allowStoppable = "true";
-            }else{
-                allowStoppable = "false";
+            // var appConfig = {
+            //     appId : "ScreenCloud",
+            //     defaultPlayerUrl : "",
+            //     urlMapping : "",
+            //     allowStoppable : "true",
+            //     state : "stopped"
+            // };//
+            console.log('registerApp : ', appConfig);
+            if(appConfig.appId == "" || appConfig.appId == undefined){
+                console.error("appId can not be empty, undefined.");
+                return;
             }
-            urlMapping = _urlMapping;
+            appConfig.defaultPlayerUrl = appConfig.defaultPlayerUrl;
+            appConfig.urlMapping = appConfig.urlMapping;
+            if( appConfig.state ){
+                appConfig.state = appConfig.state;
+            }else{
+                appConfig.state = "stopped";
+            }
+
+            for (var i = 0; i < availableApps.length; i++) {
+                var existingApp = availableApps[i];
+                if( existingApp.appId == appConfig.appId ){
+                    console.error("appId already exist in current dial service.");
+                    return;
+                }
+            }
+
+            // make sure appConfig.allowStoppable is set correctly
+            if(appConfig.allowStoppable == "0" || appConfig.allowStoppable == 0 || appConfig.allowStoppable == false){
+                appConfig.allowStoppable = "false";
+            }else{
+                appConfig.allowStoppable = "true";
+            }
+
+            if( !availableApps ){
+                availableApps = [];
+            }
+
+            availableApps[availableApps.length] = appConfig;
+            console.log('add new appConfig = ', appConfig);
+            console.log('total availableApps = ' + availableApps.length );
         },
 
-        start: function(uuid, devicename, playerUrl) {
+
+
+        start: function(uuid, devicename, playerUrl, mfacturer, mName) {
 
             deviceUUID = uuid;
             friendlyName = devicename;
             defaultPlayerUrl = playerUrl;
+            manufacturer = mfacturer;
+            modelName = mName;
 
             ////////////////////////////////////////////////
             // SSDP
             ////////////////////////////////////////////////
-            // var ssdp = require('./ssdp/chrome.js');
-            console.log('ssdp = ', ssdp);
+
             console.log("--- DialService init ---");
-            // get device IP address before start any service
+            // get device's IP address before start any service
             chrome.system.network.getNetworkInterfaces(function(interfaces){
                 console.log('util = ', util);
                 for (var i = 0; i < interfaces.length; i++) {
@@ -156,7 +196,7 @@ module.exports = (function(){
 
                 this.startWebServer();
 
-                console.log('ssdp ssdp = ', ssdp);
+                console.log('ssdp = ', ssdp);
                 // create devices
                 ssdp.createDevice({
                     uuid: deviceUUID,
@@ -168,7 +208,7 @@ module.exports = (function(){
                         return console.log(err);
                     }
                     device.start();
-                    console.log('device = ', device );
+                    console.log('created device = ', device );
                 });
 
             }.bind(this) );
@@ -189,12 +229,14 @@ module.exports = (function(){
                 get: function() {
                     // handle get request
                     // this.write('GET OK!, ' + this.request.uri)
-                    console.log('GET OK!, ' + this.request.uri );
+                    console.log('GET OK!, ' + this.request.uri + "/ availableApps = " + availableApps.length);
                     var uri = this.request.uri;
 
+                    // if no registered app yet, do nothing
+                    if( availableApps.length <= 0 ){ 
+                        return; 
+                    }
                     if( uri == "/device.description.xml"){
-                        console.log("GET 200 " + uri);
-
                         this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
                         this.setHeader("Access-Control-Expose-Headers", "Location");
                         this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
@@ -202,102 +244,135 @@ module.exports = (function(){
                         this.setHeader("Content-Type", "application/xml;charset=utf-8");
 
                         var responseMsg = '<?xml version="1.0" encoding="utf-8"?> \
-                    <root xmlns="urn:schemas-upnp-org:device-1-0"> \
-                        <specVersion> \
-                        <major>1</major> \
-                        <minor>0</minor> \
-                        </specVersion> \
-                        <URLBase>http://'+deviceIpAddress+':'+webServerPort+'/apps/</URLBase> \
-                        <device> \
-                            <deviceType>urn:dial-multiscreen-org:device:dial:1</deviceType> \
-                            <friendlyName>'+friendlyName+'</friendlyName> \
-                            <manufacturer>'+manufacturer+'</manufacturer> \
-                            <modelName>'+modelName+'</modelName> \
-                            <UDN>uuid:' + deviceUUID + '</UDN> \
-                            <serviceList> \
-                                <service> \
-                                    <serviceType>urn:schemas-upnp-org:service:dial:1</serviceType> \
-                                    <serviceId>urn:upnp-org:serviceId:dial</serviceId> \
-                                    <controlURL>/ssdp/notfound</controlURL> \
-                                    <eventSubURL>/ssdp/notfound</eventSubURL> \
-                                    <SCPDURL>/ssdp/notfound</SCPDURL> \
-                                </service> \
-                            </serviceList> \
-                        </device> \
-                    </root>';
+                                            <root xmlns="urn:schemas-upnp-org:device-1-0"> \
+                                                <specVersion> \
+                                                <major>1</major> \
+                                                <minor>0</minor> \
+                                                </specVersion> \
+                                                <URLBase>http://'+deviceIpAddress+':'+webServerPort+'/apps/</URLBase> \
+                                                <device> \
+                                                    <deviceType>urn:dial-multiscreen-org:device:dial:1</deviceType> \
+                                                    <friendlyName>'+friendlyName+'</friendlyName> \
+                                                    <manufacturer>'+manufacturer+'</manufacturer> \
+                                                    <modelName>'+modelName+'</modelName> \
+                                                    <UDN>uuid:' + deviceUUID + '</UDN> \
+                                                    <serviceList> \
+                                                        <service> \
+                                                            <serviceType>urn:schemas-upnp-org:service:dial:1</serviceType> \
+                                                            <serviceId>urn:upnp-org:serviceId:dial</serviceId> \
+                                                            <controlURL>/ssdp/notfound</controlURL> \
+                                                            <eventSubURL>/ssdp/notfound</eventSubURL> \
+                                                            <SCPDURL>/ssdp/notfound</SCPDURL> \
+                                                        </service> \
+                                                    </serviceList> \
+                                                </device> \
+                                            </root>';
 
                         this.write( responseMsg );
 
                     }else if( uri == "/apps"){
+                        
+                        // loop return all available apps
+                        for (var i = 0; i < availableApps.length; i++) {
+                            var appConfig = availableApps[i];
+                            var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
+                                            <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
+                                                <name>"+appConfig.appId+"</name> \
+                                                <friendlyName>"+appConfig.appId+"</friendlyName> \
+                                                <options allowStop='" + appConfig.allowStoppable  + "'/> \
+                                                <activity-status xmlns='urn:chrome.google.com:cast'> \
+                                                    <description>Legacy</description> \
+                                                </activity-status> \
+                                                <servicedata xmlns='urn:chrome.google.com:cast'> \
+                                                    <connectionSvcURL></connectionSvcURL> \
+                                                    <protocols></protocols> \
+                                                </servicedata> \
+                                                <state>"+appConfig.state+"</state> \
+                                                 \
+                                            </service>";
 
-                        var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
-                    <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
-                        <name>"+friendlyName+"</name> \
-                        <friendlyName>"+friendlyName+"</friendlyName> \
-                        <options allowStop='" + allowStoppable  + "'/> \
-                        <activity-status xmlns='urn:chrome.google.com:cast'> \
-                            <description>Legacy</description> \
-                        </activity-status> \
-                        <servicedata xmlns='urn:chrome.google.com:cast'> \
-                            <connectionSvcURL></connectionSvcURL> \
-                            <protocols></protocols> \
-                        </servicedata> \
-                        <state></state> \
-                         \
-                    </service>";
+                            this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
+                            this.setHeader("Access-Control-Expose-Headers", "Location");
+                            this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
+                            this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
+                            this.setHeader("Content-Type", "application/xml;charset=utf-8");
 
-                        this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
-                        this.setHeader("Access-Control-Expose-Headers", "Location");
-                        this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
-                        this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
-                        this.setHeader("Content-Type", "application/xml;charset=utf-8");
+                            this.write( appInfo );
+                        };
+                        
+                    }else if( uri.indexOf("/apps/") > -1 ){
+                        var appUri = uri;
+                        console.log('request uri = ' + uri);
+                        for (var i = 0; i < availableApps.length; i++) {
+                            var appConfig = availableApps[i];
 
-                        this.write( appInfo );
+                            if( appUri == ("/apps/"+appConfig.appId) ){
+                                console.log('match apps = ', appConfig );
+                                var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
+                                                <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
+                                                    <name>"+appConfig.appId+"</name> \
+                                                    <friendlyName>"+appConfig.appId+"</friendlyName> \
+                                                    <options allowStop='" + appConfig.allowStoppable + "'/> \
+                                                    <activity-status xmlns='urn:chrome.google.com:cast'> \
+                                                        <description>Legacy</description> \
+                                                    </activity-status> \
+                                                    <servicedata xmlns='urn:chrome.google.com:cast'> \
+                                                        <connectionSvcURL></connectionSvcURL> \
+                                                        <protocols></protocols> \
+                                                    </servicedata> \
+                                                    <state>"+appConfig.state+"</state> \
+                                                     \
+                                                </service>";
 
-                    }else if( uri == ("/apps/"+appId) ){
-                        var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
-                    <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
-                        <name>"+friendlyName+"</name> \
-                        <friendlyName>"+friendlyName+"</friendlyName> \
-                        <options allowStop='" + allowStoppable + "'/> \
-                        <activity-status xmlns='urn:chrome.google.com:cast'> \
-                            <description>Legacy</description> \
-                        </activity-status> \
-                        <servicedata xmlns='urn:chrome.google.com:cast'> \
-                            <connectionSvcURL></connectionSvcURL> \
-                            <protocols></protocols> \
-                        </servicedata> \
-                        <state></state> \
-                         \
-                    </service>";
+                                this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
+                                this.setHeader("Access-Control-Expose-Headers", "Location");
+                                this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
+                                this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
+                                this.setHeader("Content-Type", "application/xml;charset=utf-8");
 
-                        this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
-                        this.setHeader("Access-Control-Expose-Headers", "Location");
-                        this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
-                        this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
-                        this.setHeader("Content-Type", "application/xml;charset=utf-8");
-
-                        this.write( appInfo );
+                                this.write( appInfo );
+                                break;
+                            }
+                        };
+                    // }else if( uri == ("/apps/"+appId) ){
+                        
                     }
 
 
                 },
+
+
                 post: function() {
                     // handle get request
                     // this.write('POST OK!, ' + this.request.uri)
+                    console.log('request.path', this.request.path);
                     console.log('POST OK!, ' + this.request.uri );
+                    console.log('POST Body, ' + this.request.getBodyAsString() );
 
                     // console.log(
                     //   this.request.data,
                     //   this.request.getBodyAsString(),
                     //   this.request.getBodyAsJSON())
 
-                    console.log(this.request.getBodyAsJSON() );
-                    var command = this.request.getBodyAsJSON();
+                    // console.log(this.request.getBodyAsJSON() );
+                    // var command = this.request.getBodyAsJSON();
 
-                    if( command.app_id == "ScreenCloud" ){
-                        openAppWindow( command );
-                    }
+                    // if( command.app_id == "ScreenCloud" ){
+                    //     openAppWindow( command );
+                    // }
+                    var appId = this.request.path.split('/apps/')[1].split('/')[0]
+                    console.log('appId = ' + appId);
+
+                    var appConfig = getApp(appId);
+
+                    var url = appConfig.urlMapping(this.request.getBodyAsString());
+                    openAppWindow( url );
+
+                    appConfig.state = 'running';
+
+                    this.setHeader("Location", "http://"+deviceIpAddress+":"+webServerPort+"/apps/"+appId+"/web-1");
+                    this.write(" ", 201);
+
                 },
                 head: function() {
                     console.log('head', this.request);
@@ -372,8 +447,31 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
     console.log('defaultPlayerUrl--->'+defaultPlayerUrl);
 
+    
+    
+    var screenCloudPlayer = {
+                                appId : "ScreenCloud",
+                                defaultPlayerUrl : defaultPlayerUrl,
+                                urlMapping : function(arg){
+                                    return JSON.parse(arg).url;
+                                },
+                                allowStoppable : "true"
+                            }
+    dialService.registerApp(screenCloudPlayer);
+
+    var youtubePlayer = {
+                                appId : "YouTube",
+                                defaultPlayerUrl : defaultPlayerUrl,
+                                urlMapping : function(arg){
+                                    return "https://www.youtube.com/tv?" + arg;
+                                },
+                                allowStoppable : "false"
+                            }
+    dialService.registerApp(youtubePlayer);
+
     // start dial service
-    dialService.start(uuid, deviceName, defaultPlayerUrl);
+    // uuid, devicename, playerUrl, mfacturer, mName) {
+    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model');
 
 });
 
