@@ -1,28 +1,43 @@
 
 module.exports = (function(){
 
+    var Util = require('./util.js');
+    var util = new Util();
+
     var ssdp = require('ssdp/chrome.js');
     var config = require('./config.js');
+    
+    // Web Server
     var deviceIpAddress = "0.0.0.0";
     var webServerPort = 1999;
     var WebServerChrome = require('web-server-chrome');
     var WebApplication = WebServerChrome.Server;
+
+    // Dial device details
+    var appId = "ScreenCloud";
     var deviceUUID = "2fac1234-31f8-1122-2222-08002b34c003";
     var friendlyName = "ChromeApp Player";
+    var manufacturer = "ScreenCloud Player";
+    var modelName = "Chrome App";
+    var allowStoppable = "true";  // string only "true" or "false"
     var defaultPlayerUrl = "";
-    var appWindow = undefined;
+    var urlMapping;
+    
+    var availableApps = []; // array of registered apps / running apps
+
+    var appConfig = {
+        appId : "ScreenCloud",
+        deviceUUID : "2fac1234-31f8-1122-2222-08002b34c003",
+        friendlyName : "ChromeApp Player",
+        manufacturer : "ScreenCloud Player",
+        modelName : "Chrome App",
+        allowStoppable : "true",  // string only "true" or "false"
+        defaultPlayerUrl : "",
+        urlMapping
+    };//
 
     function DialService() {
         // this.exampleProp = undefined;
-    }
-
-    function _stringToArrayBuffer(str, callback) {
-        var bb = new Blob([str]);
-        var f = new FileReader();
-        f.onload = function(e) {
-            callback(e.target.result);
-        };
-        f.readAsArrayBuffer(bb);
     }
 
     function openAppWindow(command){
@@ -36,6 +51,7 @@ module.exports = (function(){
         var screenHeight = Math.round(window.screen.availHeight*1.0);
         var width = Math.round(screenWidth*0.5);
         var height = Math.round(screenHeight*0.5);
+
         console.log("screen size = ", width);
 
         if( command && command.url ){
@@ -56,44 +72,45 @@ module.exports = (function(){
             },
             function(appWin) {
                 console.log('update command url');
-                appWin.window.fullscreen();
+
+                var updateWebviewURL = function(targetURL){
+                    var webview = appWin.contentWindow.document.querySelector('webview');
+                    if(webview){
+                        webview.src = targetURL;
+                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+                        var dataObject = {};
+                        dataObject[config.k_LATEST_URL] = targetURL;
+                        config.saveConfig( dataObject );
+                        console.log('open targetURL = ' + targetURL );
+                        appWin.show();
+                    }
+                }
 
                 appWin.contentWindow.addEventListener('DOMContentLoaded',
                     function(e) {
                         // when window is loaded, set webview source
-                        var webview = appWin.contentWindow.document.querySelector('webview');
-                        webview.src = targetURL;
-
-                        console.log('open targetURL', targetURL );
-                        // now we can show it:
-                        appWin.show();
+                        updateWebviewURL(targetURL);
                     }
                 );
+                // this for execute later when get called to change content url
+                updateWebviewURL( targetURL );
 
-
-                var webview = appWin.contentWindow.document.querySelector('webview');
-                if(webview){
-                    webview.src = targetURL;
-                    chrome.storage.local.set({LATEST_URL: targetURL}); // save latest url
-
-                    console.log('open targetURL', targetURL );
-                    // now we can show it:
-                    appWin.show();
-                }
-
-            });
-    }
-
-    function _validateIPaddress(ipaddress)
-    {
-        if (/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(ipaddress))
-        {
-            return (true)
-        }
-        return (false)
+            }.bind(this));
     }
 
     DialService.prototype = {
+
+        registerApp: function(_appId, _stoppable, _urlMapping){
+            // initialize configurations
+
+            appId = _appId;
+            if(_stoppable || _stoppable == "true" || _stoppable == 1){
+                allowStoppable = "true";
+            }else{
+                allowStoppable = "false";
+            }
+            urlMapping = _urlMapping;
+        },
 
         start: function(uuid, devicename, playerUrl) {
 
@@ -109,10 +126,10 @@ module.exports = (function(){
             console.log("--- DialService init ---");
             // get device IP address before start any service
             chrome.system.network.getNetworkInterfaces(function(interfaces){
-
+                console.log('util = ', util);
                 for (var i = 0; i < interfaces.length; i++) {
                     var interfaceObj = interfaces[i]
-                    if( interfaceObj.address && _validateIPaddress(interfaceObj.address )){
+                    if( interfaceObj.address && util.validateIPaddress(interfaceObj.address )){
                         deviceIpAddress = interfaceObj.address
                         console.log('Device IP-ADDRESS = ', interfaceObj.address);
                         break;
@@ -176,8 +193,8 @@ module.exports = (function(){
                         <device> \
                             <deviceType>urn:dial-multiscreen-org:device:dial:1</deviceType> \
                             <friendlyName>'+friendlyName+'</friendlyName> \
-                            <manufacturer>ScreenCloud, Chrome App</manufacturer> \
-                            <modelName>Retina</modelName> \
+                            <manufacturer>'+manufacturer+'</manufacturer> \
+                            <modelName>'+modelName+'</modelName> \
                             <UDN>uuid:' + deviceUUID + '</UDN> \
                             <serviceList> \
                                 <service> \
@@ -199,7 +216,7 @@ module.exports = (function(){
                     <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
                         <name>"+friendlyName+"</name> \
                         <friendlyName>"+friendlyName+"</friendlyName> \
-                        <options allowStop='true'/> \
+                        <options allowStop='" + allowStoppable  + "'/> \
                         <activity-status xmlns='urn:chrome.google.com:cast'> \
                             <description>Legacy</description> \
                         </activity-status> \
@@ -219,12 +236,12 @@ module.exports = (function(){
 
                         this.write( appInfo );
 
-                    }else if( uri == "/apps/ScreenCloud"){
+                    }else if( uri == ("/apps/"+appId) ){
                         var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
                     <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
                         <name>"+friendlyName+"</name> \
                         <friendlyName>"+friendlyName+"</friendlyName> \
-                        <options allowStop='true'/> \
+                        <options allowStop='" + allowStoppable + "'/> \
                         <activity-status xmlns='urn:chrome.google.com:cast'> \
                             <description>Legacy</description> \
                         </activity-status> \

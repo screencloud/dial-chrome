@@ -17,47 +17,18 @@ function saveConfig() {
 	//dataObj['KeepScreenAlwayOn'] = cbKeepAlwayOn.checked;
 	//dataObj['StartAtBoot'] = cdStartAtBoot.checked;
 	//dataObj['VisibleOnLocalNetwork'] = cbVisible.checked;
-	dataObj['DEFAULT_PLAYER_URL'] = tbDefaultUrl.value;
-	dataObj['FRIENDLY_NAME'] = tbFriendlyName.value;
+
+	dataObj[ config.k_DEFAULT_PLAYER_URL ] = tbDefaultUrl.value;
+	dataObj[ config.k_FRIENDLY_NAME ] = tbFriendlyName.value;
 	storage.set(dataObj);//save
 }
 
 function populateConfig() {	
-	//storage.get('KeepScreenAlwayOn',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'KeepScreenAlwayOn':true} : result;
-	//	console.log('KeepScreenAlwayOn', value);
-	//	cbKeepAlwayOn.checked = value.KeepScreenAlwayOn;
-	//});
-    //
-	//storage.get('StartAtBoot',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'StartAtBoot':true} : result;
-	//	console.log('StartAtBoot', value);
-	//	cdStartAtBoot.checked = value.StartAtBoot;
-	//});
-    //
-	//storage.get('VisibleOnLocalNetwork',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'VisibleOnLocalNetwork':true} : result;
-	//	console.log('VisibleOnLocalNetwork', value);
-	//	cbVisible.checked = value.VisibleOnLocalNetwork;
-	//});
+	storage.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL],function(result){
 
-	//storage.get('DEFAULT_PLAYER_URL',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'DefaultUrl':defaultUrl} : result;
-	//	console.log('DEFAULT_PLAYER_URL', value);
-	//	tbDefaultUrl.value = value.DefaultUrl;
-	//});
-    //
-	//storage.get('FRIENDLY_NAME',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'FriendlyName':defaultFriendlyName} : result;
-	//	console.log('FRIENDLY_NAME', value);
-	//	tbFriendlyName.value = value.FriendlyName;
-	//});
-
-	storage.get(['UUID', 'DEFAULT_PLAYER_URL', 'FRIENDLY_NAME'],function(result){
-		tbFriendlyName.value = result.FRIENDLY_NAME || config.defaultDeviceFriendlyName;
-		tbDefaultUrl.value = result.DEFAULT_PLAYER_URL || config.defaultPlayerUrl;
-
-        document.querySelector('#tbUUID').value = result.UUID || undefined;
+		tbFriendlyName.value = result[config.k_FRIENDLY_NAME] || config.defaultDeviceFriendlyName;
+		tbDefaultUrl.value = result[config.k_DEFAULT_PLAYER_URL] || config.defaultPlayerUrl;
+        document.querySelector('#tbUUID').value = result[config.k_UUID] || undefined;
 	});
 }
 

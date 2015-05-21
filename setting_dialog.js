@@ -1,5 +1,10 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 module.exports = {
+	k_UUID:"UUID",
+	k_FRIENDLY_NAME:"FRIENDLY_NAME",
+	k_DEFAULT_PLAYER_URL:"DEFAULT_PLAYER_URL",
+	k_LATEST_URL:"LATEST_URL",
+
 	defaultDeviceFriendlyName: 'ScreenCloud, Chrome app',
 	defaultPlayerUrl: 'http://player.screencloud.io/index.html'
 }
@@ -23,47 +28,17 @@ function saveConfig() {
 	//dataObj['KeepScreenAlwayOn'] = cbKeepAlwayOn.checked;
 	//dataObj['StartAtBoot'] = cdStartAtBoot.checked;
 	//dataObj['VisibleOnLocalNetwork'] = cbVisible.checked;
-	dataObj['DEFAULT_PLAYER_URL'] = tbDefaultUrl.value;
-	dataObj['FRIENDLY_NAME'] = tbFriendlyName.value;
+
+	dataObj[ config.k_DEFAULT_PLAYER_URL ] = tbDefaultUrl.value;
+	dataObj[ config.k_FRIENDLY_NAME ] = tbFriendlyName.value;
 	storage.set(dataObj);//save
 }
-
 function populateConfig() {	
-	//storage.get('KeepScreenAlwayOn',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'KeepScreenAlwayOn':true} : result;
-	//	console.log('KeepScreenAlwayOn', value);
-	//	cbKeepAlwayOn.checked = value.KeepScreenAlwayOn;
-	//});
-    //
-	//storage.get('StartAtBoot',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'StartAtBoot':true} : result;
-	//	console.log('StartAtBoot', value);
-	//	cdStartAtBoot.checked = value.StartAtBoot;
-	//});
-    //
-	//storage.get('VisibleOnLocalNetwork',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'VisibleOnLocalNetwork':true} : result;
-	//	console.log('VisibleOnLocalNetwork', value);
-	//	cbVisible.checked = value.VisibleOnLocalNetwork;
-	//});
+	storage.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL],function(result){
 
-	//storage.get('DEFAULT_PLAYER_URL',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'DefaultUrl':defaultUrl} : result;
-	//	console.log('DEFAULT_PLAYER_URL', value);
-	//	tbDefaultUrl.value = value.DefaultUrl;
-	//});
-    //
-	//storage.get('FRIENDLY_NAME',function(result){
-	//	var value = Object.keys(result).length == 0 ? {'FriendlyName':defaultFriendlyName} : result;
-	//	console.log('FRIENDLY_NAME', value);
-	//	tbFriendlyName.value = value.FriendlyName;
-	//});
-
-	storage.get(['UUID', 'DEFAULT_PLAYER_URL', 'FRIENDLY_NAME'],function(result){
-		tbFriendlyName.value = result.FRIENDLY_NAME || config.defaultDeviceFriendlyName;
-		tbDefaultUrl.value = result.DEFAULT_PLAYER_URL || config.defaultPlayerUrl;
-
-        document.querySelector('#tbUUID').value = result.UUID || undefined;
+		tbFriendlyName.value = result[config.k_FRIENDLY_NAME] || config.defaultDeviceFriendlyName;
+		tbDefaultUrl.value = result[config.k_DEFAULT_PLAYER_URL] || config.defaultPlayerUrl;
+        document.querySelector('#tbUUID').value = result[config.k_UUID] || undefined;
 	});
 }
 
