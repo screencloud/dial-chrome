@@ -45,6 +45,7 @@ module.exports = (function(){
     var urlMapping;
     var allowStoppable = "true";  // string only "true" or "false"
 
+    var windowManager;
 
     var availableApps = []; // array of registered apps / running apps
     var getApp = function(id) {
@@ -60,63 +61,63 @@ module.exports = (function(){
         // this.exampleProp = undefined;
     }
 
-    function openAppWindow(command){
-        console.log('openAppWindow', command);
-        console.log('total app windows = ', chrome.app.window.getAll().length );
+    // function openAppWindow(command){
+    //     console.log('openAppWindow', command);
+    //     console.log('total app windows = ', chrome.app.window.getAll().length );
 
-        // if( chrome.app.window.getAll().length == 0 ){
+    //     // if( chrome.app.window.getAll().length == 0 ){
 
-        var targetURL = defaultPlayerUrl;
-        var screenWidth = Math.round(window.screen.availWidth*1.0);
-        var screenHeight = Math.round(window.screen.availHeight*1.0);
-        var width = Math.round(screenWidth*0.5);
-        var height = Math.round(screenHeight*0.5);
+    //     var targetURL = defaultPlayerUrl;
+    //     var screenWidth = Math.round(window.screen.availWidth*1.0);
+    //     var screenHeight = Math.round(window.screen.availHeight*1.0);
+    //     var width = Math.round(screenWidth*0.5);
+    //     var height = Math.round(screenHeight*0.5);
 
-        console.log("screen size = ", width);
+    //     console.log("screen size = ", width);
 
-        if( command ){
-            targetURL = command;
-        }
+    //     if( command ){
+    //         targetURL = command;
+    //     }
 
-        chrome.app.window.create(
-            'window.html',
-            {
-                id:"ScreenCloudPlayer",
-                outerBounds: {
-                    width: width,
-                    height: height,
-                    left: Math.round((screenWidth-width)/2),
-                    top: Math.round((screenHeight-height)/2)
-                },
-                hidden: true  // only show window when webview is configured
-            },
-            function(appWin) {
-                console.log('update command url');
+    //     chrome.app.window.create(
+    //         'window.html',
+    //         {
+    //             id:"ScreenCloudPlayer",
+    //             outerBounds: {
+    //                 width: width,
+    //                 height: height,
+    //                 left: Math.round((screenWidth-width)/2),
+    //                 top: Math.round((screenHeight-height)/2)
+    //             },
+    //             hidden: true  // only show window when webview is configured
+    //         },
+    //         function(appWin) {
+    //             console.log('update command url');
 
-                var updateWebviewURL = function(targetURL){
-                    var webview = appWin.contentWindow.document.querySelector('webview');
-                    if(webview){
-                        webview.src = targetURL;
-                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
-                        var dataObject = {};
-                        dataObject[config.k_LATEST_URL] = targetURL;
-                        config.saveConfig( dataObject );
-                        console.log('open targetURL = ' + targetURL );
-                        appWin.show();
-                    }
-                }
+    //             var updateWebviewURL = function(targetURL){
+    //                 var webview = appWin.contentWindow.document.querySelector('webview');
+    //                 if(webview){
+    //                     webview.src = targetURL;
+    //                     console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+    //                     var dataObject = {};
+    //                     dataObject[config.k_LATEST_URL] = targetURL;
+    //                     config.saveConfig( dataObject );
+    //                     console.log('open targetURL = ' + targetURL );
+    //                     appWin.show();
+    //                 }
+    //             }
 
-                appWin.contentWindow.addEventListener('DOMContentLoaded',
-                    function(e) {
-                        // when window is loaded, set webview source
-                        updateWebviewURL(targetURL);
-                    }
-                );
-                // this for execute later when get called to change content url
-                updateWebviewURL( targetURL );
+    //             appWin.contentWindow.addEventListener('DOMContentLoaded',
+    //                 function(e) {
+    //                     // when window is loaded, set webview source
+    //                     updateWebviewURL(targetURL);
+    //                 }
+    //             );
+    //             // this for execute later when get called to change content url
+    //             updateWebviewURL( targetURL );
 
-            }.bind(this));
-    }
+    //         }.bind(this));
+    // }
 
     DialService.prototype = {
 
@@ -169,13 +170,14 @@ module.exports = (function(){
 
 
 
-        start: function(uuid, devicename, playerUrl, mfacturer, mName) {
+        start: function(uuid, devicename, playerUrl, mfacturer, mName, windowMng) {
 
             deviceUUID = uuid;
             friendlyName = devicename;
             defaultPlayerUrl = playerUrl;
             manufacturer = mfacturer;
             modelName = mName;
+            windowManager = windowMng;
 
             ////////////////////////////////////////////////
             // SSDP
@@ -212,8 +214,8 @@ module.exports = (function(){
                 });
 
             }.bind(this) );
-
-            openAppWindow();
+            
+            windowManager.openAppWindow();
         },
 
 
@@ -366,7 +368,7 @@ module.exports = (function(){
                     var appConfig = getApp(appId);
 
                     var url = appConfig.urlMapping(this.request.getBodyAsString());
-                    openAppWindow( url );
+                    windowManager.openAppWindow( url );
 
                     appConfig.state = 'running';
 
@@ -430,6 +432,67 @@ function saveConfig(key, value) {
 	chrome.storage.local.set({key:value}); // save
 }
 
+var windowManager = {
+    openAppWindow: function( command ){
+        console.log('windowManager: openAppWindow', command);
+        console.log('total app windows = ', chrome.app.window.getAll().length );
+
+        // if( chrome.app.window.getAll().length == 0 ){
+
+        var targetURL = defaultPlayerUrl;
+        var screenWidth = Math.round(window.screen.availWidth*1.0);
+        var screenHeight = Math.round(window.screen.availHeight*1.0);
+        var width = Math.round(screenWidth*0.5);
+        var height = Math.round(screenHeight*0.5);
+
+        console.log("screen size = ", width);
+
+        if( command ){
+            targetURL = command;
+        }
+
+        chrome.app.window.create(
+            'window.html',
+            {
+                id:"ScreenCloudPlayer",
+                outerBounds: {
+                    width: width,
+                    height: height,
+                    left: Math.round((screenWidth-width)/2),
+                    top: Math.round((screenHeight-height)/2)
+                },
+                hidden: true  // only show window when webview is configured
+            },
+            function(appWin) {
+                console.log('update command url');
+
+                var updateWebviewURL = function(targetURL){
+                    var webview = appWin.contentWindow.document.querySelector('webview');
+                    if(webview){
+                        webview.src = targetURL;
+                        console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
+                        var dataObject = {};
+                        dataObject[config.k_LATEST_URL] = targetURL;
+                        config.saveConfig( dataObject );
+                        console.log('open targetURL = ' + targetURL );
+                        appWin.show();
+                    }
+                }
+
+                appWin.contentWindow.addEventListener('DOMContentLoaded',
+                    function(e) {
+                        // when window is loaded, set webview source
+                        updateWebviewURL(targetURL);
+                    }
+                );
+                // this for execute later when get called to change content url
+                updateWebviewURL( targetURL );
+
+            }.bind(this)
+        );
+    }
+}
+
 // get config
 chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL, config.k_LATEST_URL], function(result){
     savedConfig = result;
@@ -471,7 +534,7 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
     // start dial service
     // uuid, devicename, playerUrl, mfacturer, mName) {
-    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model');
+    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model', windowManager);
 
 });
 
