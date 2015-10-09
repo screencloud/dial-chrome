@@ -35,6 +35,7 @@ module.exports = {
                 var updateWebviewURL = function(targetURL){
                     var webview = appWin.contentWindow.document.querySelector('webview');
                     if(webview){
+                        
                         webview.src = targetURL;
                         console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
                         var dataObject = {};

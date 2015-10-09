@@ -1,170 +1,41 @@
+var WebServerChrome = require('web-server-chrome');
+var WebApplication = WebServerChrome.Server;
+
 
 module.exports = (function(){
 
-    var Util = require('./util.js');
-    var util = new Util();
-
-    var ssdp = require('ssdp/chrome.js');
-    var config = require('./config.js');
-    
-    // Web Server
-    var webServer;
-    var deviceIpAddress = "0.0.0.0";
-    var webServerPort = 1999;
-    var WebServerChrome = require('web-server-chrome');
-    var WebApplication = WebServerChrome.Server;
-
-    // Dial device details
-    var appId = "ScreenCloud";
-    // overall config for Dial service
-    var deviceUUID = "2fac1234-31f8-1122-2222-08002b34c003";
-    var friendlyName = "ChromeApp Player";
-    var manufacturer = "ScreenCloud Player";
-    var modelName = "Chrome App";
-    
-
-    // base on each app config
-    var defaultPlayerUrl = "";
-    var urlMapping;
-    var allowStoppable = "true";  // string only "true" or "false"
-
-    var windowManager;
-
-    var availableApps = []; // array of registered apps / running apps
-    var getApp = function(id) {
-            for (var i = 0; i < availableApps.length; i++) {
-                var existingApp = availableApps[i];
-                if( existingApp.appId == id ){
-                    return existingApp;
-                }
-            }
-        }
-
-    function DialService() {
+    function WebServer() {
         // this.exampleProp = undefined;
+        
+        this.availableApps = {};
+        this.deviceIpAddress = "0.0.0.0";
+        this.webServerPort = 1999;
+
+        this.deviceUUID = "";
+        this.friendlyName = "";
+        this.defaultPlayerUrl = "";
+        this.manufacturer = "";
+        this.modelName = "";
     }
 
-    DialService.prototype = {
+    WebServer.prototype = {
 
-        registerApp: function(appConfig){
-            // initialize configurations
+        start:function(availableApps, deviceIpAddress, webServerPort){
 
-            // var appConfig = {
-            //     appId : "ScreenCloud",
-            //     defaultPlayerUrl : "",
-            //     urlMapping : "",
-            //     allowStoppable : "true",
-            //     state : "stopped"
-            // };//
+            this.availableApps = availableApps;
+            this.deviceIpAddress = deviceIpAddress;
+            this.webServerPort = webServerPort;
 
-            console.log('registerApp : ', appConfig);
-            if(appConfig.appId == "" || appConfig.appId == undefined){
-                console.error("appId can not be empty, undefined.");
-                return;
-            }
-            appConfig.defaultPlayerUrl = appConfig.defaultPlayerUrl;
-            appConfig.urlMapping = appConfig.urlMapping;
-
-            if( appConfig.state ){
-                appConfig.state = appConfig.state;
-            }else{
-                appConfig.state = "stopped";
-            }
-
-            for (var i = 0; i < availableApps.length; i++) {
-                var existingApp = availableApps[i];
-                if( existingApp.appId == appConfig.appId ){
-                    console.error("appId already exist in current dial service.");
-                    return;
-                }
-            }
-
-            // make sure appConfig.allowStoppable is set correctly
-            if(appConfig.allowStoppable == "0" || appConfig.allowStoppable == 0 || appConfig.allowStoppable == false){
-                appConfig.allowStoppable = "false";
-            }else{
-                appConfig.allowStoppable = "true";
-            }
-
-            if( !availableApps ){
-                availableApps = [];
-            }
-
-            availableApps[availableApps.length] = appConfig;
-            console.log('add new appConfig = ', appConfig);
-            console.log('total availableApps = ' + availableApps.length );
-
-            // if( webServer ){
-            //     webServer.availableApps = availableApps;
-            // }
-        },
-
-
-
-        start: function(uuid, devicename, playerUrl, mfacturer, mName, windowMng, webServerMng) {
-
-            deviceUUID = uuid;
-            friendlyName = devicename;
-            defaultPlayerUrl = playerUrl;
-            manufacturer = mfacturer;
-            modelName = mName;
-            windowManager = windowMng;
-            webServer = webServerMng;
-
-            ////////////////////////////////////////////////
-            // SSDP
-            ////////////////////////////////////////////////
-
-            console.log("--- DialService init ---");
-            // get device's IP address before start any service
-            chrome.system.network.getNetworkInterfaces(function(interfaces){
-                console.log('util = ', util);
-                for (var i = 0; i < interfaces.length; i++) {
-                    var interfaceObj = interfaces[i]
-                    if( interfaceObj.address && util.validateIPaddress(interfaceObj.address )){
-                        deviceIpAddress = interfaceObj.address
-                        console.log('Device IP-ADDRESS = ', interfaceObj.address);
-                        break;
-                    }
-                };
-
-                // webServer.deviceUUID = deviceUUID;
-                // webServer.friendlyName = friendlyName;
-                // webServer.defaultPlayerUrl = defaultPlayerUrl;
-                // webServer.manufacturer = manufacturer;
-                // webServer.modelName = modelName;
-
-                // console.log('set webServer friendlyName = ' + friendlyName);
-                // console.log('-------------------------------------------------------------');
-                // webServer.start(availableApps, deviceIpAddress, webServerPort);
-                this.startWebServer();
-
-                console.log('ssdp = ', ssdp);
-                // create devices
-                ssdp.createDevice({
-                    uuid: deviceUUID,
-                    serviceList: ['upnp:rootdevice', 'urn:dial-multiscreen-org:device:dial:1', 'urn:dial-multiscreen-org:service:dial:1'],
-                    location: 'http://'+deviceIpAddress+':'+webServerPort+'/device.description.xml'
-                }, function(err, device) {
-
-                    if (err) {
-                        return console.log(err);
-                    }
-                    device.start();
-                    console.log('created device = ', device );
-                });
-
-            }.bind(this) );
-            
-            windowManager.openAppWindow( defaultPlayerUrl );
-        },
-
-
-        startWebServer:function(){
 
             console.log('-- startWebServer ---');
             var connectedSocketId = this.socketId;
             console.log('startWebServer socketId ', this.socketId);
+            console.log('this.deviceIpAddress = ', this.deviceIpAddress );
+            console.log('this.friendlyName = ', this.friendlyName );
+            console.log('this.deviceUUID = ', this.deviceUUID );
+            console.log('this.manufacturer = ', this.manufacturer );
+            console.log('this.modelName = ', this.modelName );
+            console.log('this.defaultPlayerUrl = ', this.defaultPlayerUrl );
 
             var localThis = this;
 
@@ -172,6 +43,32 @@ module.exports = (function(){
                 get: function() {
                     // handle get request
                     // this.write('GET OK!, ' + this.request.uri)
+                    if(!availableApps){
+                        console.log('availableApps is null', availableApps);
+                        return;
+                    }                    
+
+                    if(!localThis.friendlyName || localThis.friendlyName == undefined){
+                        localThis.friendlyName = "no friendlyName"
+                    }
+                    
+                    console.log('localThis.friendlyName = ', localThis.friendlyName );
+                    console.log('----- with this ------');
+                    console.log('this.deviceIpAddress = ', this.deviceIpAddress );
+                    console.log('this.friendlyName = ', this.friendlyName );
+                    console.log('this.deviceUUID = ', this.deviceUUID );
+                    console.log('this.manufacturer = ', this.manufacturer );
+                    console.log('this.modelName = ', this.modelName );
+                    console.log('this.defaultPlayerUrl = ', this.defaultPlayerUrl );
+                    console.log('----- without this ------');
+                    console.log('deviceIpAddress = ', deviceIpAddress );
+                    
+                    console.log('deviceUUID = ', deviceUUID );
+                    console.log('manufacturer = ', manufacturer );
+                    console.log('modelName = ', modelName );
+                    console.log('defaultPlayerUrl = ', defaultPlayerUrl );
+                    console.log('friendlyName = ', friendlyName );
+
                     console.log('GET OK!, ' + this.request.uri + "/ availableApps = " + availableApps.length);
                     var uri = this.request.uri;
 
@@ -195,7 +92,7 @@ module.exports = (function(){
                                                 <URLBase>http://'+deviceIpAddress+':'+webServerPort+'/apps/</URLBase> \
                                                 <device> \
                                                     <deviceType>urn:dial-multiscreen-org:device:dial:1</deviceType> \
-                                                    <friendlyName>'+friendlyName+'</friendlyName> \
+                                                    <friendlyName>'+localThis.friendlyName+'</friendlyName> \
                                                     <manufacturer>'+manufacturer+'</manufacturer> \
                                                     <modelName>'+modelName+'</modelName> \
                                                     <UDN>uuid:' + deviceUUID + '</UDN> \
@@ -214,7 +111,7 @@ module.exports = (function(){
                         this.write( responseMsg );
 
                     }else if( uri == "/apps"){
-                        
+                        console.log('============================ URI = /apps ==========================');
                         // loop return all available apps
                         for (var i = 0; i < availableApps.length; i++) {
                             var appConfig = availableApps[i];
@@ -309,26 +206,21 @@ module.exports = (function(){
                 }
             });
 
+
             var handlers = [
                 ['.*', mainHandler]
             ];
 
-            this.app = new WebApplication({handlers:handlers, port:webServerPort, host:deviceIpAddress});
+            this.app = new WebApplication({handlers:handlers, port:this.webServerPort, host:this.deviceIpAddress});
             var result = this.app.start(function(error, socketId){
                 console.log("start callback", error, socketId);
                 // this.socketId = socketId;
                 // console.log('update callback this.socketId ', this.socketId);
             }.bind(this));
             console.log(result);
-        },
-
-        stop:function(){
-            this.stop();
         }
-
     }
 
-    return DialService;
+    return WebServer;
 
 })();
-

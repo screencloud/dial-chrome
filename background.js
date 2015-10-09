@@ -1,4 +1,232 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+var WebServerChrome = require('web-server-chrome');
+var WebApplication = WebServerChrome.Server;
+
+
+module.exports = (function(){
+
+    function WebServer() {
+        // this.exampleProp = undefined;
+        
+        this.availableApps = {};
+        this.deviceIpAddress = "0.0.0.0";
+        this.webServerPort = 1999;
+
+        this.deviceUUID = "";
+        this.friendlyName = "";
+        this.defaultPlayerUrl = "";
+        this.manufacturer = "";
+        this.modelName = "";
+    }
+
+    WebServer.prototype = {
+
+        start:function(availableApps, deviceIpAddress, webServerPort){
+
+            this.availableApps = availableApps;
+            this.deviceIpAddress = deviceIpAddress;
+            this.webServerPort = webServerPort;
+
+
+            console.log('-- startWebServer ---');
+            var connectedSocketId = this.socketId;
+            console.log('startWebServer socketId ', this.socketId);
+            console.log('this.deviceIpAddress = ', this.deviceIpAddress );
+            console.log('this.friendlyName = ', this.friendlyName );
+            console.log('this.deviceUUID = ', this.deviceUUID );
+            console.log('this.manufacturer = ', this.manufacturer );
+            console.log('this.modelName = ', this.modelName );
+            console.log('this.defaultPlayerUrl = ', this.defaultPlayerUrl );
+
+            var localThis = this;
+
+            var mainHandler = WebServerChrome.HandlerFactory({
+                get: function() {
+                    // handle get request
+                    // this.write('GET OK!, ' + this.request.uri)
+                    if(!availableApps){
+                        console.log('availableApps is null', availableApps);
+                        return;
+                    }                    
+
+                    if(!localThis.friendlyName || localThis.friendlyName == undefined){
+                        localThis.friendlyName = "no friendlyName"
+                    }
+                    
+                    console.log('localThis.friendlyName = ', localThis.friendlyName );
+                    console.log('----- with this ------');
+                    console.log('this.deviceIpAddress = ', this.deviceIpAddress );
+                    console.log('this.friendlyName = ', this.friendlyName );
+                    console.log('this.deviceUUID = ', this.deviceUUID );
+                    console.log('this.manufacturer = ', this.manufacturer );
+                    console.log('this.modelName = ', this.modelName );
+                    console.log('this.defaultPlayerUrl = ', this.defaultPlayerUrl );
+                    console.log('----- without this ------');
+                    console.log('deviceIpAddress = ', deviceIpAddress );
+                    
+                    console.log('deviceUUID = ', deviceUUID );
+                    console.log('manufacturer = ', manufacturer );
+                    console.log('modelName = ', modelName );
+                    console.log('defaultPlayerUrl = ', defaultPlayerUrl );
+                    console.log('friendlyName = ', friendlyName );
+
+                    console.log('GET OK!, ' + this.request.uri + "/ availableApps = " + availableApps.length);
+                    var uri = this.request.uri;
+
+                    // if no registered app yet, do nothing
+                    if( availableApps.length <= 0 ){ 
+                        return; 
+                    }
+                    if( uri == "/device.description.xml"){
+                        this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
+                        this.setHeader("Access-Control-Expose-Headers", "Location");
+                        this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
+                        this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
+                        this.setHeader("Content-Type", "application/xml;charset=utf-8");
+
+                        var responseMsg = '<?xml version="1.0" encoding="utf-8"?> \
+                                            <root xmlns="urn:schemas-upnp-org:device-1-0"> \
+                                                <specVersion> \
+                                                <major>1</major> \
+                                                <minor>0</minor> \
+                                                </specVersion> \
+                                                <URLBase>http://'+deviceIpAddress+':'+webServerPort+'/apps/</URLBase> \
+                                                <device> \
+                                                    <deviceType>urn:dial-multiscreen-org:device:dial:1</deviceType> \
+                                                    <friendlyName>'+localThis.friendlyName+'</friendlyName> \
+                                                    <manufacturer>'+manufacturer+'</manufacturer> \
+                                                    <modelName>'+modelName+'</modelName> \
+                                                    <UDN>uuid:' + deviceUUID + '</UDN> \
+                                                    <serviceList> \
+                                                        <service> \
+                                                            <serviceType>urn:schemas-upnp-org:service:dial:1</serviceType> \
+                                                            <serviceId>urn:upnp-org:serviceId:dial</serviceId> \
+                                                            <controlURL>/ssdp/notfound</controlURL> \
+                                                            <eventSubURL>/ssdp/notfound</eventSubURL> \
+                                                            <SCPDURL>/ssdp/notfound</SCPDURL> \
+                                                        </service> \
+                                                    </serviceList> \
+                                                </device> \
+                                            </root>';
+
+                        this.write( responseMsg );
+
+                    }else if( uri == "/apps"){
+                        console.log('============================ URI = /apps ==========================');
+                        // loop return all available apps
+                        for (var i = 0; i < availableApps.length; i++) {
+                            var appConfig = availableApps[i];
+                            var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
+                                            <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
+                                                <name>"+appConfig.appId+"</name> \
+                                                <friendlyName>"+appConfig.appId+"</friendlyName> \
+                                                <options allowStop='" + appConfig.allowStoppable  + "'/> \
+                                                <activity-status xmlns='urn:chrome.google.com:cast'> \
+                                                    <description>Legacy</description> \
+                                                </activity-status> \
+                                                <servicedata xmlns='urn:chrome.google.com:cast'> \
+                                                    <connectionSvcURL></connectionSvcURL> \
+                                                    <protocols></protocols> \
+                                                </servicedata> \
+                                                <state>"+appConfig.state+"</state> \
+                                                 \
+                                            </service>";
+
+                            this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
+                            this.setHeader("Access-Control-Expose-Headers", "Location");
+                            this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
+                            this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
+                            this.setHeader("Content-Type", "application/xml;charset=utf-8");
+
+                            this.write( appInfo );
+                        };
+                        
+                    }else if( uri.indexOf("/apps/") > -1 ){
+                        var appUri = uri;
+                        console.log('request uri = ' + uri);
+                        for (var i = 0; i < availableApps.length; i++) {
+                            var appConfig = availableApps[i];
+
+                            if( appUri == ("/apps/"+appConfig.appId) ){
+                                console.log('match apps = ', appConfig );
+                                var appInfo = "<?xml version='1.0' encoding='UTF-8'?> \
+                                                <service xmlns='urn:dial-multiscreen-org:schemas:dial'> \
+                                                    <name>"+appConfig.appId+"</name> \
+                                                    <friendlyName>"+appConfig.appId+"</friendlyName> \
+                                                    <options allowStop='" + appConfig.allowStoppable + "'/> \
+                                                    <activity-status xmlns='urn:chrome.google.com:cast'> \
+                                                        <description>Legacy</description> \
+                                                    </activity-status> \
+                                                    <servicedata xmlns='urn:chrome.google.com:cast'> \
+                                                        <connectionSvcURL></connectionSvcURL> \
+                                                        <protocols></protocols> \
+                                                    </servicedata> \
+                                                    <state>"+appConfig.state+"</state> \
+                                                     \
+                                                </service>";
+
+                                this.setHeader("Access-Control-Allow-Method", "GET, POST, DELETE, OPTIONS");
+                                this.setHeader("Access-Control-Expose-Headers", "Location");
+                                this.setHeader("Cache-control", "no-cache, must-revalidate, no-store");
+                                this.setHeader("Application-URL", 'http://'+deviceIpAddress+':'+webServerPort+'/apps/');
+                                this.setHeader("Content-Type", "application/xml;charset=utf-8");
+
+                                this.write( appInfo );
+                                break;
+                            }
+                        };
+                    // }else if( uri == ("/apps/"+appId) ){
+                        
+                    }
+
+
+                },
+
+
+                post: function() {
+                    // handle get request
+                    console.log('request.path', this.request.path);
+                    console.log('POST OK!, ' + this.request.uri );
+                    console.log('POST Body, ' + this.request.getBodyAsString() );
+
+                    var appId = this.request.path.split('/apps/')[1].split('/')[0]
+                    console.log('appId = ' + appId);
+
+                    var appConfig = getApp(appId);
+
+                    var url = appConfig.urlMapping(this.request.getBodyAsString());
+                    windowManager.openAppWindow( url );
+
+                    appConfig.state = 'running';
+                    this.setHeader("Location", "http://"+deviceIpAddress+":"+webServerPort+"/apps/"+appId+"/web-1");
+                    this.write(" ", 201);
+
+                },
+                head: function() {
+                    console.log('head', this.request);
+                }
+            });
+
+
+            var handlers = [
+                ['.*', mainHandler]
+            ];
+
+            this.app = new WebApplication({handlers:handlers, port:this.webServerPort, host:this.deviceIpAddress});
+            var result = this.app.start(function(error, socketId){
+                console.log("start callback", error, socketId);
+                // this.socketId = socketId;
+                // console.log('update callback this.socketId ', this.socketId);
+            }.bind(this));
+            console.log(result);
+        }
+    }
+
+    return WebServer;
+
+})();
+
+},{"web-server-chrome":22}],2:[function(require,module,exports){
 module.exports = {
 	k_UUID:"UUID",
 	k_FRIENDLY_NAME:"FRIENDLY_NAME",
@@ -15,7 +243,7 @@ module.exports = {
 		storage.set( dataObj );
 	}
 }
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 
 module.exports = (function(){
 
@@ -26,6 +254,7 @@ module.exports = (function(){
     var config = require('./config.js');
     
     // Web Server
+    var webServer;
     var deviceIpAddress = "0.0.0.0";
     var webServerPort = 1999;
     var WebServerChrome = require('web-server-chrome');
@@ -61,64 +290,6 @@ module.exports = (function(){
         // this.exampleProp = undefined;
     }
 
-    // function openAppWindow(command){
-    //     console.log('openAppWindow', command);
-    //     console.log('total app windows = ', chrome.app.window.getAll().length );
-
-    //     // if( chrome.app.window.getAll().length == 0 ){
-
-    //     var targetURL = defaultPlayerUrl;
-    //     var screenWidth = Math.round(window.screen.availWidth*1.0);
-    //     var screenHeight = Math.round(window.screen.availHeight*1.0);
-    //     var width = Math.round(screenWidth*0.5);
-    //     var height = Math.round(screenHeight*0.5);
-
-    //     console.log("screen size = ", width);
-
-    //     if( command ){
-    //         targetURL = command;
-    //     }
-
-    //     chrome.app.window.create(
-    //         'window.html',
-    //         {
-    //             id:"ScreenCloudPlayer",
-    //             outerBounds: {
-    //                 width: width,
-    //                 height: height,
-    //                 left: Math.round((screenWidth-width)/2),
-    //                 top: Math.round((screenHeight-height)/2)
-    //             },
-    //             hidden: true  // only show window when webview is configured
-    //         },
-    //         function(appWin) {
-    //             console.log('update command url');
-
-    //             var updateWebviewURL = function(targetURL){
-    //                 var webview = appWin.contentWindow.document.querySelector('webview');
-    //                 if(webview){
-    //                     webview.src = targetURL;
-    //                     console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
-    //                     var dataObject = {};
-    //                     dataObject[config.k_LATEST_URL] = targetURL;
-    //                     config.saveConfig( dataObject );
-    //                     console.log('open targetURL = ' + targetURL );
-    //                     appWin.show();
-    //                 }
-    //             }
-
-    //             appWin.contentWindow.addEventListener('DOMContentLoaded',
-    //                 function(e) {
-    //                     // when window is loaded, set webview source
-    //                     updateWebviewURL(targetURL);
-    //                 }
-    //             );
-    //             // this for execute later when get called to change content url
-    //             updateWebviewURL( targetURL );
-
-    //         }.bind(this));
-    // }
-
     DialService.prototype = {
 
         registerApp: function(appConfig){
@@ -131,6 +302,7 @@ module.exports = (function(){
             //     allowStoppable : "true",
             //     state : "stopped"
             // };//
+
             console.log('registerApp : ', appConfig);
             if(appConfig.appId == "" || appConfig.appId == undefined){
                 console.error("appId can not be empty, undefined.");
@@ -167,11 +339,15 @@ module.exports = (function(){
             availableApps[availableApps.length] = appConfig;
             console.log('add new appConfig = ', appConfig);
             console.log('total availableApps = ' + availableApps.length );
+
+            // if( webServer ){
+            //     webServer.availableApps = availableApps;
+            // }
         },
 
 
 
-        start: function(uuid, devicename, playerUrl, mfacturer, mName, windowMng) {
+        start: function(uuid, devicename, playerUrl, mfacturer, mName, windowMng, webServerMng) {
 
             deviceUUID = uuid;
             friendlyName = devicename;
@@ -179,6 +355,7 @@ module.exports = (function(){
             manufacturer = mfacturer;
             modelName = mName;
             windowManager = windowMng;
+            webServer = webServerMng;
 
             ////////////////////////////////////////////////
             // SSDP
@@ -197,6 +374,15 @@ module.exports = (function(){
                     }
                 };
 
+                // webServer.deviceUUID = deviceUUID;
+                // webServer.friendlyName = friendlyName;
+                // webServer.defaultPlayerUrl = defaultPlayerUrl;
+                // webServer.manufacturer = manufacturer;
+                // webServer.modelName = modelName;
+
+                // console.log('set webServer friendlyName = ' + friendlyName);
+                // console.log('-------------------------------------------------------------');
+                // webServer.start(availableApps, deviceIpAddress, webServerPort);
                 this.startWebServer();
 
                 console.log('ssdp = ', ssdp);
@@ -393,7 +579,7 @@ module.exports = (function(){
 })();
 
 
-},{"./config.js":1,"./util.js":28,"ssdp/chrome.js":4,"web-server-chrome":21}],3:[function(require,module,exports){
+},{"./config.js":2,"./util.js":29,"ssdp/chrome.js":5,"web-server-chrome":22}],4:[function(require,module,exports){
 /**
  * Listens for the app launching then creates the window
  *
@@ -406,7 +592,10 @@ module.exports = (function(){
 var DialService = require('./dialService.js');
 var dialService = new DialService();
 var config = require('./config.js');
-var windowManager = require('./windowManager');
+var windowManager = require('./windowManager.js');
+var WebServer = require('./chromeWebServer.js');
+var webServer = new WebServer();
+
 var defaultPlayerUrl = "";
 var savedConfig;
 
@@ -421,67 +610,10 @@ function saveConfig(key, value) {
 	chrome.storage.local.set({key:value}); // save
 }
 
-// var windowManager = {
-//     openAppWindow: function( command ){
-//         console.log('windowManager: openAppWindow', command);
-//         console.log('total app windows = ', chrome.app.window.getAll().length );
-
-//         var targetURL = defaultPlayerUrl;
-//         var screenWidth = Math.round(window.screen.availWidth*1.0);
-//         var screenHeight = Math.round(window.screen.availHeight*1.0);
-//         var width = Math.round(screenWidth*0.5);
-//         var height = Math.round(screenHeight*0.5);
-
-//         console.log("screen size = ", width);
-
-//         if( command ){
-//             targetURL = command;
-//         }
-
-//         chrome.app.window.create(
-//             'window.html',
-//             {
-//                 id:"ScreenCloudPlayer",
-//                 outerBounds: {
-//                     width: width,
-//                     height: height,
-//                     left: Math.round((screenWidth-width)/2),
-//                     top: Math.round((screenHeight-height)/2)
-//                 },
-//                 hidden: true  // only show window when webview is configured
-//             },
-//             function(appWin) {
-//                 console.log('update command url');
-
-//                 var updateWebviewURL = function(targetURL){
-//                     var webview = appWin.contentWindow.document.querySelector('webview');
-//                     if(webview){
-//                         webview.src = targetURL;
-//                         console.log('config.k_LATEST_URL =', config.k_LATEST_URL);
-//                         var dataObject = {};
-//                         dataObject[config.k_LATEST_URL] = targetURL;
-//                         config.saveConfig( dataObject );
-//                         console.log('open targetURL = ' + targetURL );
-//                         appWin.show();
-//                     }
-//                 }
-
-//                 appWin.contentWindow.addEventListener('DOMContentLoaded',
-//                     function(e) {
-//                         // when window is loaded, set webview source
-//                         updateWebviewURL(targetURL);
-//                     }
-//                 );
-//                 // this for execute later when get called to change content url
-//                 updateWebviewURL( targetURL );
-
-//             }.bind(this)
-//         );
-//     }
-// }
 
 // get config
 chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL, config.k_LATEST_URL], function(result){
+    
     savedConfig = result;
     var uuid = savedConfig[config.k_UUID];
 
@@ -497,7 +629,6 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
     console.log('defaultPlayerUrl--->'+defaultPlayerUrl);
 
-    
     
     var screenCloudPlayer = {
                                 appId : "ScreenCloud",
@@ -521,11 +652,11 @@ chrome.storage.local.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAUL
 
     // start dial service
     // uuid, devicename, playerUrl, mfacturer, mName) {
-    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model', windowManager);
+    dialService.start(uuid, deviceName, defaultPlayerUrl, 'ScreenCloud factory', 'ChromeApp Model', windowManager, webServer);
 
 });
 
-},{"./config.js":1,"./dialService.js":2,"./windowManager":29}],4:[function(require,module,exports){
+},{"./chromeWebServer.js":1,"./config.js":2,"./dialService.js":3,"./windowManager.js":30}],5:[function(require,module,exports){
 // module interface for chrome os
 
 var udp = require('./lib/udp/udp-chrome.js');
@@ -534,7 +665,7 @@ module.exports = {
     createClient: require('./lib/client.js')(udp),
     createDevice: require('./lib/device.js')(udp)
 };
-},{"./lib/client.js":5,"./lib/device.js":6,"./lib/udp/udp-chrome.js":11}],5:[function(require,module,exports){
+},{"./lib/client.js":6,"./lib/device.js":7,"./lib/udp/udp-chrome.js":12}],6:[function(require,module,exports){
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -636,7 +767,7 @@ module.exports = function(udp) {
 
 };
 
-},{"./httpu.js":7,"./ssdp-constants.js":10,"events":34}],6:[function(require,module,exports){
+},{"./httpu.js":8,"./ssdp-constants.js":11,"events":35}],7:[function(require,module,exports){
 
 var os = require('os');
 
@@ -879,7 +1010,7 @@ module.exports = function(udp) {
 
 };
 
-},{"../package.json":12,"./httpu.js":7,"./ssdp-constants.js":10,"os":41}],7:[function(require,module,exports){
+},{"../package.json":13,"./httpu.js":8,"./ssdp-constants.js":11,"os":42}],8:[function(require,module,exports){
 
 var httpParser = require('./modules/http-parser.js');
 
@@ -968,7 +1099,7 @@ module.exports = function(udp) {
     return create;
 
 };
-},{"./modules/http-parser.js":8}],8:[function(require,module,exports){
+},{"./modules/http-parser.js":9}],9:[function(require,module,exports){
 
 // Basic HTTP parser
 
@@ -1135,7 +1266,7 @@ module.exports = {
     stringify: stringify
 };
 
-},{"http":35}],9:[function(require,module,exports){
+},{"http":36}],10:[function(require,module,exports){
 
 function stringToBuffer(string) {
     // NB: uses UTF-8
@@ -1187,12 +1318,12 @@ module.exports = {
     toString: bufferToString
 };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 module.exports = {
     SSDP_PORT: 1900,
     SSDP_MULTICAST_IP: '239.255.255.250'
 };
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 
 var udp = chrome.sockets.udp;
 
@@ -1284,7 +1415,7 @@ function create(onMsg, onCreated) {
 }
 
 module.exports = create;
-},{"../modules/utf8-parser.js":9}],12:[function(require,module,exports){
+},{"../modules/utf8-parser.js":10}],13:[function(require,module,exports){
 module.exports={
   "name": "ssdp",
   "version": "1.5.3",
@@ -1318,7 +1449,7 @@ module.exports={
   "_fromGithub": true
 }
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 var _ = require('lodash');
 module.exports = (function() { 
     
@@ -1401,7 +1532,7 @@ module.exports = (function() {
     
     return BaseHandler;
 });
-},{"./httplib.js":20,"./mime.js":22,"lodash":23}],14:[function(require,module,exports){
+},{"./httplib.js":21,"./mime.js":23,"lodash":24}],15:[function(require,module,exports){
 module.exports = (function() {
     function Buffer(opts) {
         /*
@@ -1583,7 +1714,7 @@ module.exports = (function() {
     //     test_buffer4()
     // }
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 var utils = require('./utils.js');
 var Request = require('./request.js');
 
@@ -1684,7 +1815,7 @@ module.exports = (function() {
     return HTTPConnection;
 })()
 
-},{"./request.js":24,"./utils.js":26}],16:[function(require,module,exports){
+},{"./request.js":25,"./utils.js":27}],17:[function(require,module,exports){
 var _ = require('lodash');
 var BaseHandler = new (require('./basehandler.js'))();
 var entryCache = require('./entrycache.js').entryCache;
@@ -1972,7 +2103,7 @@ module.exports = function(fileSystem) {
     // window.DirectoryEntryHandler = DirectoryEntryHandler
 
 }
-},{"./basehandler.js":13,"./entrycache.js":17,"lodash":23}],17:[function(require,module,exports){
+},{"./basehandler.js":14,"./entrycache.js":18,"lodash":24}],18:[function(require,module,exports){
 var _ = require('lodash');
 
 module.exports = {};
@@ -2096,7 +2227,7 @@ module.exports.entryFileCache = (function() {
 })();
 
 console.log(module.exports);
-},{"lodash":23}],18:[function(require,module,exports){
+},{"lodash":24}],19:[function(require,module,exports){
 var _ = require('lodash');
 
 var entryCache = require('./entrycache.js').entryCache;
@@ -2166,7 +2297,7 @@ module.exports = (function() {
 
     return FileSystem;
 })();
-},{"./entrycache.js":17,"lodash":23}],19:[function(require,module,exports){
+},{"./entrycache.js":18,"lodash":24}],20:[function(require,module,exports){
 var _ = require('lodash');
 
 var BaseHandler = require('./basehandler.js')();
@@ -2183,7 +2314,7 @@ var makeHandler = function(handlerMethods){
 }
 
 module.exports = makeHandler
-},{"./basehandler.js":13,"lodash":23}],20:[function(require,module,exports){
+},{"./basehandler.js":14,"lodash":24}],21:[function(require,module,exports){
 module.exports.HTTPRESPONSES = {
     "200": "OK", 
     "201": "Created", 
@@ -2227,7 +2358,7 @@ module.exports.HTTPRESPONSES = {
     "504": "Gateway Timeout", 
     "505": "HTTP Version Not Supported"
 }
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 if (! String.prototype.endsWith) {
     String.prototype.endsWith = function(substr) {
         for (var i=0; i<substr.length; i++) {
@@ -2264,7 +2395,7 @@ module.exports = {
 // console.log(new module.exports.Server({handlers:['.*', module.exports.DirHandler], port:8887}));
 
 
-},{"./directoryHandler.js":16,"./filesystem.js":18,"./handlerfactory.js":19,"./request.js":24,"./stream.js":25,"./webapp.js":27,"lodash":23}],22:[function(require,module,exports){
+},{"./directoryHandler.js":17,"./filesystem.js":19,"./handlerfactory.js":20,"./request.js":25,"./stream.js":26,"./webapp.js":28,"lodash":24}],23:[function(require,module,exports){
 module.exports = {};
 module.exports.MIMETYPES = {
   "123": "application/vnd.lotus-1-2-3", 
@@ -3249,7 +3380,7 @@ module.exports.MIMETYPES = {
   "zirz": "application/vnd.zul", 
   "zmm": "application/vnd.handheld-entertainment+xml"
 };
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 (function (global){
 /**
  * @license
@@ -10039,7 +10170,7 @@ module.exports.MIMETYPES = {
 }.call(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 module.exports = (function() {
     function Request(opts) {
         this.method = opts.method
@@ -10080,7 +10211,7 @@ module.exports = (function() {
 
     return Request;
 })()
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 var utils = require('./utils.js');
 var Buffer_ = require('./buffer.js');
 
@@ -10252,7 +10383,7 @@ module.exports = (function() {
 
 })()
 
-},{"./buffer.js":14,"./utils.js":26}],26:[function(require,module,exports){
+},{"./buffer.js":15,"./utils.js":27}],27:[function(require,module,exports){
 module.exports = {
 
     parseHeaders: function parseHeaders(lines) {
@@ -10311,7 +10442,7 @@ module.exports = {
     },
 
 }
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 
 var IOStream = require('./stream.js');
 var HTTPConnection = require('./connection.js');
@@ -10412,7 +10543,7 @@ module.exports = (function(){
 })();
 
 
-},{"./connection.js":15,"./stream.js":25}],28:[function(require,module,exports){
+},{"./connection.js":16,"./stream.js":26}],29:[function(require,module,exports){
 module.exports = (function(){
 
 	function Util(){
@@ -10445,7 +10576,7 @@ module.exports = (function(){
 	return Util;
 })();
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 var config = require('./config.js');
 
 module.exports = {
@@ -10506,7 +10637,7 @@ module.exports = {
         );
     }
 };
-},{"./config.js":1}],30:[function(require,module,exports){
+},{"./config.js":2}],31:[function(require,module,exports){
 /*!
  * The buffer module from node.js, for the browser.
  *
@@ -11559,7 +11690,7 @@ function decodeUtf8Char (str) {
   }
 }
 
-},{"base64-js":31,"ieee754":32,"is-array":33}],31:[function(require,module,exports){
+},{"base64-js":32,"ieee754":33,"is-array":34}],32:[function(require,module,exports){
 var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 ;(function (exports) {
@@ -11681,7 +11812,7 @@ var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 	exports.fromByteArray = uint8ToBase64
 }(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 exports.read = function(buffer, offset, isLE, mLen, nBytes) {
   var e, m,
       eLen = nBytes * 8 - mLen - 1,
@@ -11767,7 +11898,7 @@ exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128;
 };
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 
 /**
  * isArray
@@ -11802,7 +11933,7 @@ module.exports = isArray || function (val) {
   return !! val && '[object Array]' == str.call(val);
 };
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -12105,7 +12236,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],35:[function(require,module,exports){
+},{}],36:[function(require,module,exports){
 var http = module.exports;
 var EventEmitter = require('events').EventEmitter;
 var Request = require('./lib/request');
@@ -12251,7 +12382,7 @@ http.STATUS_CODES = {
     510 : 'Not Extended',               // RFC 2774
     511 : 'Network Authentication Required' // RFC 6585
 };
-},{"./lib/request":36,"events":34,"url":60}],36:[function(require,module,exports){
+},{"./lib/request":37,"events":35,"url":61}],37:[function(require,module,exports){
 var Stream = require('stream');
 var Response = require('./response');
 var Base64 = require('Base64');
@@ -12462,7 +12593,7 @@ var isXHR2Compatible = function (obj) {
     if (typeof FormData !== 'undefined' && obj instanceof FormData) return true;
 };
 
-},{"./response":37,"Base64":38,"inherits":39,"stream":58}],37:[function(require,module,exports){
+},{"./response":38,"Base64":39,"inherits":40,"stream":59}],38:[function(require,module,exports){
 var Stream = require('stream');
 var util = require('util');
 
@@ -12584,7 +12715,7 @@ var isArray = Array.isArray || function (xs) {
     return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{"stream":58,"util":62}],38:[function(require,module,exports){
+},{"stream":59,"util":63}],39:[function(require,module,exports){
 ;(function () {
 
   var object = typeof exports != 'undefined' ? exports : this; // #8: web workers
@@ -12646,7 +12777,7 @@ var isArray = Array.isArray || function (xs) {
 
 }());
 
-},{}],39:[function(require,module,exports){
+},{}],40:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -12671,12 +12802,12 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],40:[function(require,module,exports){
+},{}],41:[function(require,module,exports){
 module.exports = Array.isArray || function (arr) {
   return Object.prototype.toString.call(arr) == '[object Array]';
 };
 
-},{}],41:[function(require,module,exports){
+},{}],42:[function(require,module,exports){
 exports.endianness = function () { return 'LE' };
 
 exports.hostname = function () {
@@ -12723,7 +12854,7 @@ exports.tmpdir = exports.tmpDir = function () {
 
 exports.EOL = '\n';
 
-},{}],42:[function(require,module,exports){
+},{}],43:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -12811,7 +12942,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],43:[function(require,module,exports){
+},{}],44:[function(require,module,exports){
 (function (global){
 /*! http://mths.be/punycode v1.2.4 by @mathias */
 ;(function(root) {
@@ -13322,7 +13453,7 @@ process.chdir = function (dir) {
 }(this));
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],44:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13408,7 +13539,7 @@ var isArray = Array.isArray || function (xs) {
   return Object.prototype.toString.call(xs) === '[object Array]';
 };
 
-},{}],45:[function(require,module,exports){
+},{}],46:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13495,16 +13626,16 @@ var objectKeys = Object.keys || function (obj) {
   return res;
 };
 
-},{}],46:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 'use strict';
 
 exports.decode = exports.parse = require('./decode');
 exports.encode = exports.stringify = require('./encode');
 
-},{"./decode":44,"./encode":45}],47:[function(require,module,exports){
+},{"./decode":45,"./encode":46}],48:[function(require,module,exports){
 module.exports = require("./lib/_stream_duplex.js")
 
-},{"./lib/_stream_duplex.js":48}],48:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":49}],49:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -13597,7 +13728,7 @@ function forEach (xs, f) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_readable":50,"./_stream_writable":52,"_process":42,"core-util-is":53,"inherits":39}],49:[function(require,module,exports){
+},{"./_stream_readable":51,"./_stream_writable":53,"_process":43,"core-util-is":54,"inherits":40}],50:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -13645,7 +13776,7 @@ PassThrough.prototype._transform = function(chunk, encoding, cb) {
   cb(null, chunk);
 };
 
-},{"./_stream_transform":51,"core-util-is":53,"inherits":39}],50:[function(require,module,exports){
+},{"./_stream_transform":52,"core-util-is":54,"inherits":40}],51:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -14631,7 +14762,7 @@ function indexOf (xs, x) {
 }
 
 }).call(this,require('_process'))
-},{"_process":42,"buffer":30,"core-util-is":53,"events":34,"inherits":39,"isarray":40,"stream":58,"string_decoder/":59}],51:[function(require,module,exports){
+},{"_process":43,"buffer":31,"core-util-is":54,"events":35,"inherits":40,"isarray":41,"stream":59,"string_decoder/":60}],52:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -14843,7 +14974,7 @@ function done(stream, er) {
   return stream.push(null);
 }
 
-},{"./_stream_duplex":48,"core-util-is":53,"inherits":39}],52:[function(require,module,exports){
+},{"./_stream_duplex":49,"core-util-is":54,"inherits":40}],53:[function(require,module,exports){
 (function (process){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15233,7 +15364,7 @@ function endWritable(stream, state, cb) {
 }
 
 }).call(this,require('_process'))
-},{"./_stream_duplex":48,"_process":42,"buffer":30,"core-util-is":53,"inherits":39,"stream":58}],53:[function(require,module,exports){
+},{"./_stream_duplex":49,"_process":43,"buffer":31,"core-util-is":54,"inherits":40,"stream":59}],54:[function(require,module,exports){
 (function (Buffer){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -15343,10 +15474,10 @@ function objectToString(o) {
   return Object.prototype.toString.call(o);
 }
 }).call(this,require("buffer").Buffer)
-},{"buffer":30}],54:[function(require,module,exports){
+},{"buffer":31}],55:[function(require,module,exports){
 module.exports = require("./lib/_stream_passthrough.js")
 
-},{"./lib/_stream_passthrough.js":49}],55:[function(require,module,exports){
+},{"./lib/_stream_passthrough.js":50}],56:[function(require,module,exports){
 var Stream = require('stream'); // hack to fix a circular dependency issue when used with browserify
 exports = module.exports = require('./lib/_stream_readable.js');
 exports.Stream = Stream;
@@ -15356,13 +15487,13 @@ exports.Duplex = require('./lib/_stream_duplex.js');
 exports.Transform = require('./lib/_stream_transform.js');
 exports.PassThrough = require('./lib/_stream_passthrough.js');
 
-},{"./lib/_stream_duplex.js":48,"./lib/_stream_passthrough.js":49,"./lib/_stream_readable.js":50,"./lib/_stream_transform.js":51,"./lib/_stream_writable.js":52,"stream":58}],56:[function(require,module,exports){
+},{"./lib/_stream_duplex.js":49,"./lib/_stream_passthrough.js":50,"./lib/_stream_readable.js":51,"./lib/_stream_transform.js":52,"./lib/_stream_writable.js":53,"stream":59}],57:[function(require,module,exports){
 module.exports = require("./lib/_stream_transform.js")
 
-},{"./lib/_stream_transform.js":51}],57:[function(require,module,exports){
+},{"./lib/_stream_transform.js":52}],58:[function(require,module,exports){
 module.exports = require("./lib/_stream_writable.js")
 
-},{"./lib/_stream_writable.js":52}],58:[function(require,module,exports){
+},{"./lib/_stream_writable.js":53}],59:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15491,7 +15622,7 @@ Stream.prototype.pipe = function(dest, options) {
   return dest;
 };
 
-},{"events":34,"inherits":39,"readable-stream/duplex.js":47,"readable-stream/passthrough.js":54,"readable-stream/readable.js":55,"readable-stream/transform.js":56,"readable-stream/writable.js":57}],59:[function(require,module,exports){
+},{"events":35,"inherits":40,"readable-stream/duplex.js":48,"readable-stream/passthrough.js":55,"readable-stream/readable.js":56,"readable-stream/transform.js":57,"readable-stream/writable.js":58}],60:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -15714,7 +15845,7 @@ function base64DetectIncompleteChar(buffer) {
   this.charLength = this.charReceived ? 3 : 0;
 }
 
-},{"buffer":30}],60:[function(require,module,exports){
+},{"buffer":31}],61:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -16423,14 +16554,14 @@ function isNullOrUndefined(arg) {
   return  arg == null;
 }
 
-},{"punycode":43,"querystring":46}],61:[function(require,module,exports){
+},{"punycode":44,"querystring":47}],62:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],62:[function(require,module,exports){
+},{}],63:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -17020,4 +17151,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":61,"_process":42,"inherits":39}]},{},[3]);
+},{"./support/isBuffer":62,"_process":43,"inherits":40}]},{},[4]);

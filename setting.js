@@ -73,5 +73,5 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 // fullscreen the current window at startup.
 onload = function() {
-	//chrome.app.window.current().fullscreen();
+	// chrome.app.window.current().fullscreen();
 }

@@ -6,7 +6,14 @@ module.exports = {
 	k_LATEST_URL:"LATEST_URL",
 
 	defaultDeviceFriendlyName: 'ScreenCloud, Chrome app',
-	defaultPlayerUrl: 'http://player.screencloud.io/index.html'
+	defaultPlayerUrl: 'http://player.screencloud.io/index.html',
+	
+
+	saveConfig: function(dataObj) {
+		console.log('saveConfig ', dataObj );
+		var storage = chrome.storage.local;
+		storage.set( dataObj );
+	}
 }
 },{}],2:[function(require,module,exports){
 //var defaultUrl = "http://player.screencloud.io/index.html";
@@ -33,6 +40,7 @@ function saveConfig() {
 	dataObj[ config.k_FRIENDLY_NAME ] = tbFriendlyName.value;
 	storage.set(dataObj);//save
 }
+
 function populateConfig() {	
 	storage.get([config.k_UUID, config.k_FRIENDLY_NAME, config.k_DEFAULT_PLAYER_URL],function(result){
 
@@ -83,7 +91,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 
 // fullscreen the current window at startup.
 onload = function() {
-	//chrome.app.window.current().fullscreen();
+	// chrome.app.window.current().fullscreen();
 }
 
 },{"./config.js":1}]},{},[2]);
